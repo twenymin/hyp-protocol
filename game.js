@@ -1,117 +1,173 @@
-// ============== GLOBAL DEPENDENCIES (loaded via CDN in index.html) ==============
-const { useState, useEffect, useMemo, useRef } = React;
-const { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } = Recharts;
-
-// ============== INLINE SVG ICONS (replaces lucide-react) ==============
-// Why inline: lucide via CDN doesn't expose React components, only vanilla SVG injection.
-// We're a small app with ~25 icons total, so inlining is cleaner than wrestling with lucide CDN.
-
-const Icon = ({ d, size = 18, color = 'currentColor', strokeWidth = 1.8, fill = 'none', style = {}, ...rest }) => (
-  React.createElement('svg', {
-    xmlns: 'http://www.w3.org/2000/svg',
-    width: size, height: size,
-    viewBox: '0 0 24 24',
-    fill: fill,
-    stroke: color, strokeWidth: strokeWidth,
-    strokeLinecap: 'round', strokeLinejoin: 'round',
-    style: { display: 'inline-block', verticalAlign: 'middle', ...style },
-    ...rest,
-  }, React.createElement('g', { dangerouslySetInnerHTML: { __html: d } }))
-);
-
-const Check = (p) => React.createElement(Icon, { ...p, d: '<polyline points="20 6 9 17 4 12"/>' });
-const Home = (p) => React.createElement(Icon, { ...p, d: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' });
-const MapIcon = (p) => React.createElement(Icon, { ...p, d: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>' });
-const User = (p) => React.createElement(Icon, { ...p, d: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' });
-const Settings = (p) => React.createElement(Icon, { ...p, d: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>' });
-const Lock = (p) => React.createElement(Icon, { ...p, d: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' });
-const Trophy = (p) => React.createElement(Icon, { ...p, d: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>' });
-const Flame = (p) => React.createElement(Icon, { ...p, d: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>' });
-const Eye = (p) => React.createElement(Icon, { ...p, d: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>' });
-const Mail = (p) => React.createElement(Icon, { ...p, d: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>' });
-const Activity = (p) => React.createElement(Icon, { ...p, d: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' });
-const Target = (p) => React.createElement(Icon, { ...p, d: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>' });
-const Shield = (p) => React.createElement(Icon, { ...p, d: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>' });
-const Zap = (p) => React.createElement(Icon, { ...p, d: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>' });
-const RotateCcw = (p) => React.createElement(Icon, { ...p, d: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>' });
-const ArrowLeft = (p) => React.createElement(Icon, { ...p, d: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>' });
-const ArrowRight = (p) => React.createElement(Icon, { ...p, d: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>' });
-const Plus = (p) => React.createElement(Icon, { ...p, d: '<path d="M5 12h14"/><path d="M12 5v14"/>' });
-const X = (p) => React.createElement(Icon, { ...p, d: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>' });
-const Camera = (p) => React.createElement(Icon, { ...p, d: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>' });
-const Trash2 = (p) => React.createElement(Icon, { ...p, d: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' });
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Check, Home, Map as MapIcon, User, Settings, Lock, Trophy, Flame, Eye, Mail, Activity, Target, Shield, Zap, RotateCcw, ArrowLeft, ArrowRight, Plus, Minus, X, Camera, Trash2 } from 'lucide-react';
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 
 // ============== DESIGN TOKENS ==============
+// GTA Vice City + Miami neon + FC 26 tier metallics
 const C = {
-  bg: '#050608', bgPanel: '#0A0B0E', bgCard: '#0F1115',
-  surface: '#15181E', surfaceLight: '#1D2128',
-  border: '#262B33', borderBright: '#363D47',
-  yellow: '#FFD60A', yellowGlow: 'rgba(255, 214, 10, 0.55)',
-  yellowSoft: 'rgba(255, 214, 10, 0.10)', yellowBorder: 'rgba(255, 214, 10, 0.35)',
-  cyan: '#00E5FF', cyanSoft: 'rgba(0, 229, 255, 0.10)', cyanBorder: 'rgba(0, 229, 255, 0.35)',
-  magenta: '#FF2D7F', magentaSoft: 'rgba(255, 45, 127, 0.10)',
-  text: '#F0F2F5', textDim: '#9BA1AB', textFaint: '#5C6370',
-  success: '#00E5A0',
-  danger: '#FF4D4D',
+  bg: '#0F0B1A',
+  bgPanel: '#15101F',
+  bgCard: '#1B1428',
+  surface: '#251B36',
+  surfaceLight: '#2F2342',
+  border: '#3A2D52',
+  borderBright: '#4F3D6E',
+
+  pink: '#FF2E63', pinkGlow: 'rgba(255, 46, 99, 0.55)',
+  pinkSoft: 'rgba(255, 46, 99, 0.10)', pinkBorder: 'rgba(255, 46, 99, 0.40)',
+  teal: '#00D9C0', tealGlow: 'rgba(0, 217, 192, 0.45)',
+  tealSoft: 'rgba(0, 217, 192, 0.10)', tealBorder: 'rgba(0, 217, 192, 0.40)',
+
+  bronze: '#C77D4A', bronzeGlow: 'rgba(199, 125, 74, 0.55)',
+  silver: '#D8DCE3', silverGlow: 'rgba(216, 220, 227, 0.55)',
+  gold: '#F2C94C', goldGlow: 'rgba(242, 201, 76, 0.65)',
+
+  text: '#F2EBD9', textDim: '#A89FB5', textFaint: '#6F6580',
+  success: '#00D9A0', danger: '#FF4757',
+
+  // Legacy aliases — point to new palette so existing code keeps working
+  yellow: '#FF2E63', yellowGlow: 'rgba(255, 46, 99, 0.55)',
+  yellowSoft: 'rgba(255, 46, 99, 0.10)', yellowBorder: 'rgba(255, 46, 99, 0.40)',
+  cyan: '#00D9C0', cyanSoft: 'rgba(0, 217, 192, 0.10)', cyanBorder: 'rgba(0, 217, 192, 0.40)',
+  magenta: '#FF2E63', magentaSoft: 'rgba(255, 46, 99, 0.10)',
 };
 const F = {
-  display: '"Chakra Petch", sans-serif',
-  body: '"Geist", -apple-system, sans-serif',
-  mono: '"JetBrains Mono", "SF Mono", monospace',
+  display: '"Bebas Neue", "Anton", "Arial Narrow", sans-serif',
+  body: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  mono: '"IBM Plex Mono", "JetBrains Mono", "SF Mono", monospace',
 };
 const angleClip = 'polygon(0 14px, 14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px))';
 const smallAngleClip = 'polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px))';
 
 // ============== GAME LOGIC ==============
-const STAT_CODES = ['STR', 'END', 'MAS', 'NUT', 'REC', 'FRM'];
-const STAT_LABELS = { STR: 'strength', END: 'endurance', MAS: 'mass', NUT: 'nutrition', REC: 'recovery', FRM: 'form' };
+const STAT_CODES = ['СИЛ', 'ВЫН', 'МАС', 'ПИТ', 'ВОС', 'ФОР'];
+const STAT_LABELS = {
+  'СИЛ': 'сила',
+  'ВЫН': 'выносливость',
+  'МАС': 'масса',
+  'ПИТ': 'питание',
+  'ВОС': 'восстановление',
+  'ФОР': 'форма',
+};
 
-const calcOVR = (stats) => Math.round(STAT_CODES.reduce((s, c) => s + stats[c], 0) / 6);
+const calcOVR = (stats) => {
+  if (!stats) return null;
+  const values = STAT_CODES.map(c => stats[c]).filter(v => typeof v === 'number');
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
+};
+
 const calcTier = (ovr) => {
-  if (ovr >= 80) return { name: 'icon', color: C.magenta, glow: 'rgba(255, 45, 127, 0.55)' };
-  if (ovr >= 65) return { name: 'gold', color: C.yellow, glow: C.yellowGlow };
-  if (ovr >= 50) return { name: 'silver', color: '#C0C8D4', glow: 'rgba(192, 200, 212, 0.45)' };
-  return { name: 'bronze', color: '#CD7F32', glow: 'rgba(205, 127, 50, 0.45)' };
+  if (ovr === null || ovr === undefined) return { name: 'unranked', display: 'НЕТ ОЦЕНКИ', color: C.textDim, glow: 'rgba(168, 159, 181, 0.35)' };
+  if (ovr >= 80) return { name: 'icon', display: 'ИКОНА', color: C.pink, glow: C.pinkGlow };
+  if (ovr >= 65) return { name: 'gold', display: 'ЗОЛОТО', color: C.gold, glow: C.goldGlow };
+  if (ovr >= 50) return { name: 'silver', display: 'СЕРЕБРО', color: C.silver, glow: C.silverGlow };
+  return { name: 'bronze', display: 'БРОНЗА', color: C.bronze, glow: C.bronzeGlow };
 };
 
 const XP_TO_STAT_RATIO = 0.005;
 
 // ============== ONBOARDING CALIBRATION ==============
-const EXPERIENCE_LEVELS = [
-  { code: 'NOVICE', label: 'first time', desc: 'never trained seriously', baseStr: 22, baseMas: 26 },
-  { code: 'BEGINNER', label: '< 1 year', desc: 'occasional gym, knows basics', baseStr: 32, baseMas: 36 },
-  { code: 'INTERMEDIATE', label: '1-3 years', desc: 'consistent training, good form', baseStr: 45, baseMas: 48 },
-  { code: 'ADVANCED', label: '3-5 years', desc: 'plateau-aware, structured programs', baseStr: 58, baseMas: 60 },
-  { code: 'ELITE', label: '5+ years', desc: 'competing, optimized everything', baseStr: 70, baseMas: 72 },
-];
+// New philosophy: NO OVR until Day 1 measurement is complete.
+// Onboarding only collects basic bio. OVR is calculated from real Day 1 data.
 
-const calibrateStartingStats = (profile) => {
-  const exp = EXPERIENCE_LEVELS[profile.experienceLevel ?? 1];
-  const ageMod = profile.age <= 22 ? -3 : profile.age <= 35 ? 0 : profile.age <= 45 ? -3 : -8;
-  const heightM = profile.height / 100;
-  const bmi = profile.weight / (heightM * heightM);
-  const bmiMod = bmi >= 19 && bmi <= 26 ? 5 : 0;
+// Body fat self-assessment levels with separate scales for male/female
+// Visual silhouettes shown to user; they pick the closest match
+const BODY_FAT_LEVELS = {
+  male: [
+    { id: 'shredded', label: 'Сухой', range: '7-10%', value: 8, desc: 'Видны вены, очень рельефный пресс' },
+    { id: 'athletic', label: 'Атлетичный', range: '11-14%', value: 12, desc: 'Чёткий пресс, хорошая прорисовка мышц' },
+    { id: 'fit', label: 'Фит', range: '15-18%', value: 16, desc: 'Виден пресс, формы заметны' },
+    { id: 'average', label: 'Средний', range: '19-23%', value: 21, desc: 'Пресс не виден, форма мягче' },
+    { id: 'soft', label: 'Мягкий', range: '24-28%', value: 26, desc: 'Заметный живот, рыхлые формы' },
+    { id: 'overweight', label: 'Полный', range: '29-35%+', value: 32, desc: 'Выраженный лишний вес' },
+  ],
+  female: [
+    { id: 'shredded', label: 'Сухая', range: '14-17%', value: 15, desc: 'Очень рельефная, спортсменка' },
+    { id: 'athletic', label: 'Атлетичная', range: '18-21%', value: 19, desc: 'Чёткий пресс, тренированная' },
+    { id: 'fit', label: 'Фит', range: '22-25%', value: 23, desc: 'Виден пресс, подтянутая' },
+    { id: 'average', label: 'Средняя', range: '26-30%', value: 28, desc: 'Здоровая женская форма' },
+    { id: 'soft', label: 'Мягкая', range: '31-35%', value: 33, desc: 'Мягкие формы, плавные линии' },
+    { id: 'overweight', label: 'Полная', range: '36-42%+', value: 38, desc: 'Выраженный лишний вес' },
+  ],
+  nb: [
+    { id: 'shredded', label: 'Сухой', range: '10-13%', value: 11, desc: 'Очень рельефный, минимум жира' },
+    { id: 'athletic', label: 'Атлетичный', range: '14-17%', value: 15, desc: 'Тренированный, виден пресс' },
+    { id: 'fit', label: 'Фит', range: '18-21%', value: 19, desc: 'Подтянутый, хорошая форма' },
+    { id: 'average', label: 'Средний', range: '22-26%', value: 24, desc: 'Здоровая средняя форма' },
+    { id: 'soft', label: 'Мягкий', range: '27-31%', value: 29, desc: 'Мягкие формы' },
+    { id: 'overweight', label: 'Полный', range: '32-38%+', value: 35, desc: 'Выраженный лишний вес' },
+  ],
+};
+
+// Threshold for switching between MASS and RECOMP modes (% body fat)
+const MODE_THRESHOLDS = { male: 18, female: 25, nb: 22 };
+
+// Calculate OVR + 6 stats from Day 1 measurement data
+const calibrateFromDay1 = (profile, day1Data) => {
+  // day1Data contains: weight, bodyFat (%), measurements, maxPushups, plankSec
+  const { age, gender, height, weight: onboardWeight } = profile;
+  const { weight = onboardWeight, bodyFat = 20, maxPushups = 0, plankSec = 0 } = day1Data;
+
+  // Lean body mass (kg)
+  const lbm = weight * (1 - bodyFat / 100);
+
+  // STR: pushups, normalized by bodyweight ratio
+  // 0 pushups → 15, 50+ → 75
+  const strBase = Math.min(75, 15 + maxPushups * 1.2);
+  const ageMod = age <= 22 ? -2 : age <= 35 ? 0 : age <= 45 ? -3 : -8;
+
+  // END: plank time + base
+  // 0 sec → 25, 180+ sec → 70
+  const endBase = Math.min(70, 25 + plankSec / 4);
+
+  // MAS: from LBM relative to height (FFMI-inspired)
+  const heightM = height / 100;
+  const ffmi = lbm / (heightM * heightM);
+  // FFMI 17 (untrained) → 30, FFMI 20 (good) → 55, FFMI 23 (advanced) → 75, 25+ (elite) → 85
+  const masBase = Math.max(20, Math.min(85, (ffmi - 15) * 8 + 25));
+
+  // FRM: blend of body fat (lower = better up to ~12%) and LBM ratio
+  const idealBF = gender === 'female' ? 22 : gender === 'male' ? 14 : 18;
+  const bfDelta = Math.abs(bodyFat - idealBF);
+  const frmBase = Math.max(20, 75 - bfDelta * 1.5);
+
+  // PIT (nutrition): always low at start — it's a learned skill
+  const pitBase = 25;
+
+  // VOS (recovery): age-dependent base
+  const vosBase = age <= 25 ? 55 : age <= 35 ? 50 : age <= 45 ? 42 : 35;
+
   return {
-    STR: Math.max(15, Math.min(85, exp.baseStr + ageMod)),
-    END: Math.max(15, Math.min(85, 35 + ageMod + bmiMod)),
-    MAS: Math.max(15, Math.min(85, exp.baseMas + ageMod)),
-    NUT: 25,
-    REC: 40 + (profile.age <= 30 ? 5 : 0),
-    FRM: Math.max(20, Math.min(75, exp.baseStr - 5 + ageMod)),
+    'СИЛ': Math.max(15, Math.min(85, Math.round(strBase + ageMod))),
+    'ВЫН': Math.max(15, Math.min(85, Math.round(endBase + ageMod))),
+    'МАС': Math.max(20, Math.min(85, Math.round(masBase + ageMod))),
+    'ПИТ': pitBase,
+    'ВОС': vosBase,
+    'ФОР': Math.max(20, Math.min(85, Math.round(frmBase + ageMod))),
   };
 };
 
-const calibrateGoals = (startingStats, ovrTarget) => {
-  const startOvr = calcOVR(startingStats);
-  const delta = ovrTarget - startOvr;
+// Determine campaign mode (MASS or RECOMP) from gender + bodyFat
+const determineCampaignMode = (gender, bodyFat) => {
+  const threshold = MODE_THRESHOLDS[gender] || 22;
+  return bodyFat < threshold ? 'mass' : 'recomp';
+};
+
+// Calculate stat goals after Day 1 — auto, not user-chosen
+const calibrateGoals = (startingStats, mode) => {
+  // Mass mode: focus on STR, MAS, ВОС
+  // Recomp mode: focus on ФОР, ПИТ, ВЫН
+  const ambitionPerStat = {
+    mass: { 'СИЛ': 18, 'ВЫН': 10, 'МАС': 22, 'ПИТ': 25, 'ВОС': 18, 'ФОР': 12 },
+    recomp: { 'СИЛ': 14, 'ВЫН': 18, 'МАС': 12, 'ПИТ': 30, 'ВОС': 18, 'ФОР': 22 },
+  };
+  const ambitions = ambitionPerStat[mode];
   return Object.fromEntries(
-    STAT_CODES.map(code => {
-      const start = startingStats[code];
-      const room = 90 - start;
-      const weight = room / (90 - 30);
-      const goal = Math.round(Math.min(90, start + delta * weight * 1.4));
-      return [code, goal];
-    })
+    STAT_CODES.map(code => [
+      code,
+      Math.min(90, startingStats[code] + ambitions[code]),
+    ])
   );
 };
 
@@ -120,17 +176,76 @@ const calibrateGoals = (startingStats, ovrTarget) => {
 // exercises is for workout-type missions
 
 const DAY_1_MISSIONS = [
-  { code: 'LETTER_FROM_FUTURE', desc: 'cutscene · open before start', xp: 50, stat: 'FRM', special: true, inputType: 'text', prompt: 'Прочитай письмо, напиши свою цель одной фразой' },
-  { code: 'BASELINE_WEIGHT', desc: 'measurement · manual input', xp: 50, stat: 'MAS', inputType: 'metric', metric: 'weight', unit: 'kg' },
-  { code: 'PHOTO_SCAN_3X', desc: 'measurement · 3 angles', xp: 150, stat: 'FRM', inputType: 'photo', photoCount: 3, angles: ['front', 'side', 'back'] },
-  { code: 'BODY_METRICS', desc: 'measurement · 5 body points', xp: 100, stat: 'MAS', inputType: 'metrics', metrics: [
-    { key: 'chest', label: 'chest', unit: 'cm' },
-    { key: 'arm', label: 'arm', unit: 'cm' },
-    { key: 'waist', label: 'waist', unit: 'cm' },
-    { key: 'thigh', label: 'thigh', unit: 'cm' },
-    { key: 'shoulders', label: 'shoulders', unit: 'cm' },
-  ]},
-  { code: 'WALK_30:00', desc: 'activation · soft launch', xp: 100, stat: 'END', inputType: 'cardio', target: { duration: 30, unit: 'min' } },
+  {
+    code: 'BUY_TAPE_MEASURE',
+    title: 'Купить сантиметровую ленту',
+    desc: 'Швейная лента на 150 см. Продаётся в любой галантерее или на маркетплейсах за 100-300₽. Это первая экипировка героя — без неё дальше не сможешь.',
+    xp: 50, stat: 'ФОР', special: true,
+    inputType: 'checkbox',
+    confirmLabel: 'Лента у меня в руках',
+  },
+  {
+    code: 'BASELINE_WEIGHT',
+    title: 'Замер веса',
+    desc: 'Утром, натощак, после туалета. Фиксируем точку отсчёта.',
+    xp: 50, stat: 'МАС',
+    inputType: 'metric', metric: 'вес', unit: 'кг',
+    range: { min: 30, max: 250 },
+  },
+  {
+    code: 'BODY_METRICS',
+    title: 'Замер обхватов',
+    desc: '5 точек тела. Лента плотно, но не давит. Делать утром перед едой.',
+    xp: 200, stat: 'МАС',
+    inputType: 'metrics',
+    metrics: [
+      { key: 'chest', label: 'грудь', unit: 'см', hint: 'на уровне сосков, на выдохе', range: { min: 60, max: 180 } },
+      { key: 'arm', label: 'бицепс', unit: 'см', hint: 'правая рука, согнутая, в напряжении', range: { min: 20, max: 60 } },
+      { key: 'waist', label: 'талия', unit: 'см', hint: 'на уровне пупка, не втягивая живот', range: { min: 50, max: 180 } },
+      { key: 'thigh', label: 'бедро', unit: 'см', hint: 'середина бедра, расслабленное', range: { min: 35, max: 100 } },
+      { key: 'shoulders', label: 'плечи', unit: 'см', hint: 'самая широкая часть, через дельты', range: { min: 80, max: 180 } },
+    ],
+  },
+  {
+    code: 'BODY_FAT_ESTIMATE',
+    title: 'Оценка процента жира',
+    desc: 'Без точного устройства невозможно измерить. Выбери силуэт, который больше всего похож на тебя в зеркале. Точность ±3% — нормально для старта.',
+    xp: 100, stat: 'ФОР',
+    inputType: 'bodyfat',
+  },
+  {
+    code: 'PHOTO_SCAN_3X',
+    title: 'Фото в трёх ракурсах',
+    desc: 'Фронт, бок, спина. Стоя ровно, расслабленно, при дневном свете. Фото хранятся только на твоём телефоне.',
+    xp: 150, stat: 'ФОР',
+    inputType: 'photo', photoCount: 3,
+    angles: ['фронт', 'бок', 'спина'],
+  },
+  {
+    code: 'PUSHUP_TEST',
+    title: 'Тест отжиманий',
+    desc: 'Максимум отжиманий за один подход. Без читинга — корпус прямой, грудь опускается до пола. Если можешь только с колен — считай с колен.',
+    xp: 200, stat: 'СИЛ',
+    inputType: 'metric', metric: 'отжимания макс', unit: 'раз',
+    range: { min: 0, max: 200 },
+  },
+  {
+    code: 'PLANK_TEST',
+    title: 'Тест планки',
+    desc: 'Максимум секунд в планке на локтях. Корпус прямой, ягодицы не задраны. Останавливайся когда форма ломается.',
+    xp: 150, stat: 'ВЫН',
+    inputType: 'timer', metric: 'планка', unit: 'сек',
+    range: { min: 0, max: 600 },
+  },
+  {
+    code: 'CALIBRATION_COMPLETE',
+    title: 'Завершить калибровку',
+    desc: 'Подтверди готовность. После этого игра рассчитает твой стартовый OVR и определит план: набор массы или рекомпозиция.',
+    xp: 100, stat: 'ФОР', special: true,
+    inputType: 'checkbox',
+    confirmLabel: 'Я готов начать игру',
+    requiresAllOthersDone: true,
+  },
 ];
 
 // Workout exercises by chapter
@@ -153,88 +268,103 @@ const WORKOUT_TEMPLATES = {
 const MISSION_POOL = {
   foundation: {
     workouts: [
-      { code: 'PUSH_DAY_A', desc: 'workout · chest+shoulders+triceps', xp: 200, stat: 'STR', inputType: 'workout' },
-      { code: 'PULL_DAY_A', desc: 'workout · back+biceps', xp: 200, stat: 'STR', inputType: 'workout' },
-      { code: 'LEG_DAY_A', desc: 'workout · quads+glutes+calves', xp: 220, stat: 'MAS', inputType: 'workout' },
-      { code: 'FORM_DRILL', desc: 'technique · video review', xp: 120, stat: 'FRM', inputType: 'checkbox' },
+      { code: 'PUSH_DAY_A', desc: 'тренировка · грудь+плечи+трицепс', xp: 200, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'PULL_DAY_A', desc: 'тренировка · спина+бицепс', xp: 200, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'LEG_DAY_A', desc: 'тренировка · ноги+ягодицы+икры', xp: 220, stat: 'МАС', inputType: 'workout' },
+      { code: 'FORM_DRILL', desc: 'техника · видеоразбор', xp: 120, stat: 'ФОР', inputType: 'checkbox' },
     ],
     nutrition: [
-      { code: 'PROTEIN_TRACK', desc: 'log · 1.6g/kg target', xp: 100, stat: 'NUT', inputType: 'metric', metric: 'protein', unit: 'g' },
-      { code: 'MEAL_PHOTO', desc: 'log · breakfast scan', xp: 60, stat: 'NUT', inputType: 'photo', photoCount: 1, angles: ['meal'] },
-      { code: 'CAL_SURPLUS', desc: 'log · +300 kcal', xp: 80, stat: 'NUT', inputType: 'metric', metric: 'calories', unit: 'kcal' },
+      { code: 'PROTEIN_TRACK', desc: 'лог · 1.6г/кг белка', xp: 100, stat: 'ПИТ', inputType: 'metric', metric: 'protein', unit: 'g' },
+      { code: 'MEAL_PHOTO', desc: 'лог · фото завтрака', xp: 60, stat: 'ПИТ', inputType: 'photo', photoCount: 1, angles: ['meal'] },
+      { code: 'CAL_SURPLUS', desc: 'лог · +300 ккал', xp: 80, stat: 'ПИТ', inputType: 'metric', metric: 'calories', unit: 'kcal' },
     ],
     recovery: [
-      { code: 'SLEEP_7H+', desc: 'recovery · 7+ hours', xp: 100, stat: 'REC', inputType: 'metric', metric: 'sleep', unit: 'h' },
-      { code: 'STRETCH_15:00', desc: 'recovery · mobility', xp: 60, stat: 'REC', inputType: 'cardio', target: { duration: 15, unit: 'min' } },
+      { code: 'SLEEP_7H+', desc: 'восстановление · сон 7+ часов', xp: 100, stat: 'ВОС', inputType: 'metric', metric: 'sleep', unit: 'h' },
+      { code: 'STRETCH_15:00', desc: 'восстановление · растяжка', xp: 60, stat: 'ВОС', inputType: 'cardio', target: { duration: 15, unit: 'мин' } },
     ],
     cardio: [
-      { code: 'WALK_45:00', desc: 'cardio · zone 1-2', xp: 100, stat: 'END', inputType: 'cardio', target: { duration: 45, unit: 'min' } },
+      { code: 'WALK_45:00', desc: 'кардио · зона 1-2', xp: 100, stat: 'ВЫН', inputType: 'cardio', target: { duration: 45, unit: 'мин' } },
     ],
   },
   volume: {
     workouts: [
-      { code: 'PUSH_DAY_B', desc: 'workout · volume push', xp: 240, stat: 'STR', inputType: 'workout' },
-      { code: 'PULL_DAY_B', desc: 'workout · volume pull', xp: 240, stat: 'STR', inputType: 'workout' },
-      { code: 'LEG_DAY_B', desc: 'workout · volume legs', xp: 260, stat: 'MAS', inputType: 'workout' },
-      { code: 'ARMS_FOCUS', desc: 'workout · biceps+triceps', xp: 180, stat: 'MAS', inputType: 'workout' },
+      { code: 'PUSH_DAY_B', desc: 'тренировка · жим, объём', xp: 240, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'PULL_DAY_B', desc: 'тренировка · тяга, объём', xp: 240, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'LEG_DAY_B', desc: 'тренировка · ноги, объём', xp: 260, stat: 'МАС', inputType: 'workout' },
+      { code: 'ARMS_FOCUS', desc: 'тренировка · руки', xp: 180, stat: 'МАС', inputType: 'workout' },
     ],
     nutrition: [
-      { code: 'PROTEIN_TRACK', desc: 'log · 1.8g/kg target', xp: 110, stat: 'NUT', inputType: 'metric', metric: 'protein', unit: 'g' },
-      { code: 'MEAL_PHOTO_3X', desc: 'log · all meals', xp: 120, stat: 'NUT', inputType: 'photo', photoCount: 3, angles: ['breakfast', 'lunch', 'dinner'] },
+      { code: 'PROTEIN_TRACK', desc: 'лог · 1.8г/кг белка', xp: 110, stat: 'ПИТ', inputType: 'metric', metric: 'protein', unit: 'g' },
+      { code: 'MEAL_PHOTO_3X', desc: 'лог · все приёмы пищи', xp: 120, stat: 'ПИТ', inputType: 'photo', photoCount: 3, angles: ['breakfast', 'lunch', 'dinner'] },
     ],
     recovery: [
-      { code: 'SLEEP_8H+', desc: 'recovery · 8+ hours', xp: 120, stat: 'REC', inputType: 'metric', metric: 'sleep', unit: 'h' },
-      { code: 'COLD_SHOWER', desc: 'recovery · cold exposure', xp: 80, stat: 'REC', inputType: 'cardio', target: { duration: 3, unit: 'min' } },
+      { code: 'SLEEP_8H+', desc: 'восстановление · сон 8+ часов', xp: 120, stat: 'ВОС', inputType: 'metric', metric: 'sleep', unit: 'h' },
+      { code: 'COLD_SHOWER', desc: 'восстановление · холод', xp: 80, stat: 'ВОС', inputType: 'cardio', target: { duration: 3, unit: 'мин' } },
     ],
     cardio: [
-      { code: 'INCLINE_WALK', desc: 'cardio · zone 2', xp: 120, stat: 'END', inputType: 'cardio', target: { duration: 30, unit: 'min' } },
+      { code: 'INCLINE_WALK', desc: 'кардио · зона 2', xp: 120, stat: 'ВЫН', inputType: 'cardio', target: { duration: 30, unit: 'мин' } },
     ],
   },
   intensity: {
     workouts: [
-      { code: 'PUSH_HEAVY', desc: 'workout · heavy push 5x5', xp: 280, stat: 'STR', inputType: 'workout' },
-      { code: 'PULL_HEAVY', desc: 'workout · heavy pull 5x5', xp: 280, stat: 'STR', inputType: 'workout' },
-      { code: 'LEG_HEAVY', desc: 'workout · heavy squat+dl', xp: 300, stat: 'MAS', inputType: 'workout' },
+      { code: 'PUSH_HEAVY', desc: 'тренировка · тяжёлый жим 5x5', xp: 280, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'PULL_HEAVY', desc: 'тренировка · тяжёлая тяга 5x5', xp: 280, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'LEG_HEAVY', desc: 'тренировка · присед+тяга, тяжёлые', xp: 300, stat: 'МАС', inputType: 'workout' },
     ],
     nutrition: [
-      { code: 'PROTEIN_2G', desc: 'log · 2.0g/kg target', xp: 130, stat: 'NUT', inputType: 'metric', metric: 'protein', unit: 'g' },
-      { code: 'CARB_TIMING', desc: 'log · pre/post workout', xp: 100, stat: 'NUT', inputType: 'checkbox' },
+      { code: 'PROTEIN_2G', desc: 'лог · 2.0г/кг белка', xp: 130, stat: 'ПИТ', inputType: 'metric', metric: 'protein', unit: 'g' },
+      { code: 'CARB_TIMING', desc: 'лог · до/после тренировки', xp: 100, stat: 'ПИТ', inputType: 'checkbox' },
     ],
     recovery: [
-      { code: 'SLEEP_8H+', desc: 'recovery · 8+ hours', xp: 130, stat: 'REC', inputType: 'metric', metric: 'sleep', unit: 'h' },
-      { code: 'DELOAD_DAY', desc: 'recovery · active rest', xp: 100, stat: 'REC', inputType: 'cardio', target: { duration: 20, unit: 'min' } },
+      { code: 'SLEEP_8H+', desc: 'восстановление · сон 8+ часов', xp: 130, stat: 'ВОС', inputType: 'metric', metric: 'sleep', unit: 'h' },
+      { code: 'DELOAD_DAY', desc: 'восстановление · активный отдых', xp: 100, stat: 'ВОС', inputType: 'cardio', target: { duration: 20, unit: 'мин' } },
     ],
     cardio: [
-      { code: 'HIIT_15:00', desc: 'cardio · zone 4', xp: 150, stat: 'END', inputType: 'cardio', target: { duration: 15, unit: 'min' } },
+      { code: 'HIIT_15:00', desc: 'кардио · зона 4', xp: 150, stat: 'ВЫН', inputType: 'cardio', target: { duration: 15, unit: 'мин' } },
     ],
   },
   consolidation: {
     workouts: [
-      { code: 'PUSH_PEAK', desc: 'workout · peak push', xp: 300, stat: 'STR', inputType: 'workout' },
-      { code: 'PULL_PEAK', desc: 'workout · peak pull', xp: 300, stat: 'STR', inputType: 'workout' },
-      { code: 'LEG_PEAK', desc: 'workout · peak legs', xp: 320, stat: 'MAS', inputType: 'workout' },
+      { code: 'PUSH_PEAK', desc: 'тренировка · пиковый жим', xp: 300, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'PULL_PEAK', desc: 'тренировка · пиковая тяга', xp: 300, stat: 'СИЛ', inputType: 'workout' },
+      { code: 'LEG_PEAK', desc: 'тренировка · пиковые ноги', xp: 320, stat: 'МАС', inputType: 'workout' },
     ],
     nutrition: [
-      { code: 'PROTEIN_2G', desc: 'log · 2.0g/kg target', xp: 130, stat: 'NUT', inputType: 'metric', metric: 'protein', unit: 'g' },
-      { code: 'MEAL_PREP', desc: 'log · weekly prep', xp: 150, stat: 'NUT', inputType: 'checkbox' },
+      { code: 'PROTEIN_2G', desc: 'лог · 2.0г/кг белка', xp: 130, stat: 'ПИТ', inputType: 'metric', metric: 'protein', unit: 'g' },
+      { code: 'MEAL_PREP', desc: 'лог · заготовка на неделю', xp: 150, stat: 'ПИТ', inputType: 'checkbox' },
     ],
     recovery: [
-      { code: 'SLEEP_8H+', desc: 'recovery · 8+ hours', xp: 140, stat: 'REC', inputType: 'metric', metric: 'sleep', unit: 'h' },
-      { code: 'MOBILITY_30', desc: 'recovery · 30min mobility', xp: 110, stat: 'REC', inputType: 'cardio', target: { duration: 30, unit: 'min' } },
+      { code: 'SLEEP_8H+', desc: 'восстановление · сон 8+ часов', xp: 140, stat: 'ВОС', inputType: 'metric', metric: 'sleep', unit: 'h' },
+      { code: 'MOBILITY_30', desc: 'восстановление · 30 мин мобилити', xp: 110, stat: 'ВОС', inputType: 'cardio', target: { duration: 30, unit: 'мин' } },
     ],
     cardio: [
-      { code: 'STEADY_30', desc: 'cardio · zone 2', xp: 130, stat: 'END', inputType: 'cardio', target: { duration: 30, unit: 'min' } },
+      { code: 'STEADY_30', desc: 'кардио · зона 2', xp: 130, stat: 'ВЫН', inputType: 'cardio', target: { duration: 30, unit: 'мин' } },
     ],
   },
 };
 
 const BOSS_DAYS = [21, 42, 63, 84];
 
-const getChapterByDay = (day) => {
-  if (day <= 21) return { idx: 0, name: 'foundation', romanNum: 'I', display: 'Foundation' };
-  if (day <= 42) return { idx: 1, name: 'volume', romanNum: 'II', display: 'Volume' };
-  if (day <= 63) return { idx: 2, name: 'intensity', romanNum: 'III', display: 'Intensity' };
-  return { idx: 3, name: 'consolidation', romanNum: 'IV', display: 'Consolidation' };
+const getChapterByDay = (day, mode = 'mass') => {
+  const chapters = {
+    mass: [
+      { idx: 0, name: 'foundation', romanNum: 'I', display: 'ФУНДАМЕНТ' },
+      { idx: 1, name: 'volume', romanNum: 'II', display: 'ОБЪЁМ' },
+      { idx: 2, name: 'intensity', romanNum: 'III', display: 'ИНТЕНСИВНОСТЬ' },
+      { idx: 3, name: 'consolidation', romanNum: 'IV', display: 'ЗАКРЕПЛЕНИЕ' },
+    ],
+    recomp: [
+      { idx: 0, name: 'cleanse', romanNum: 'I', display: 'ОЧИЩЕНИЕ' },
+      { idx: 1, name: 'forge', romanNum: 'II', display: 'ЗАКАЛКА' },
+      { idx: 2, name: 'breakthrough', romanNum: 'III', display: 'ПРОРЫВ' },
+      { idx: 3, name: 'transformation', romanNum: 'IV', display: 'ПРЕОБРАЖЕНИЕ' },
+    ],
+  };
+  const set = chapters[mode] || chapters.mass;
+  if (day <= 21) return set[0];
+  if (day <= 42) return set[1];
+  if (day <= 63) return set[2];
+  return set[3];
 };
 
 const seededShuffle = (arr, seed) => {
@@ -248,21 +378,21 @@ const seededShuffle = (arr, seed) => {
   return a;
 };
 
-const generateMissionsForDay = (day) => {
+const generateMissionsForDay = (day, mode = 'mass') => {
   if (day === 1) {
     return DAY_1_MISSIONS.map((m, i) => ({ ...m, num: String(i + 1).padStart(2, '0'), id: `d1_${i}`, done: false, data: null }));
   }
   if (BOSS_DAYS.includes(day)) {
-    const ch = getChapterByDay(day);
+    const ch = getChapterByDay(day, mode);
     return [
-      { code: 'BOSS_PHOTO_SCAN', desc: 'boss · photo comparison', xp: 300, stat: 'FRM', num: '01', id: `d${day}_boss1`, done: false, special: true, inputType: 'photo', photoCount: 3, angles: ['front', 'side', 'back'], data: null },
-      { code: 'BOSS_WEIGH_IN', desc: 'boss · weight check', xp: 200, stat: 'MAS', num: '02', id: `d${day}_boss2`, done: false, special: true, inputType: 'metric', metric: 'weight', unit: 'kg', data: null },
-      { code: 'BOSS_STRENGTH_TEST', desc: 'boss · 1RM test', xp: 400, stat: 'STR', num: '03', id: `d${day}_boss3`, done: false, special: true, inputType: 'workout', data: null },
-      { code: `CHAPTER_${ch.romanNum}_FINALE`, desc: 'boss · review + reflect', xp: 500, stat: 'FRM', num: '04', id: `d${day}_boss4`, done: false, special: true, inputType: 'text', prompt: 'Что ты узнал о себе за эти 21 день? Что станешь делать иначе?', data: null },
+      { code: 'BOSS_PHOTO_SCAN', title: 'Босс · Фото сравнение', desc: 'Переснимаем фото в трёх ракурсах. Сравниваем с прошлым замером.', xp: 300, stat: 'ФОР', num: '01', id: `d${day}_boss1`, done: false, special: true, inputType: 'photo', photoCount: 3, angles: ['фронт', 'бок', 'спина'], data: null },
+      { code: 'BOSS_WEIGH_IN', title: 'Босс · Контрольный вес', desc: 'Утром, натощак. Сравниваем дельту с прошлым замером.', xp: 200, stat: 'МАС', num: '02', id: `d${day}_boss2`, done: false, special: true, inputType: 'metric', metric: 'вес', unit: 'кг', range: { min: 30, max: 250 }, data: null },
+      { code: 'BOSS_STRENGTH_TEST', title: 'Босс · Тест силы', desc: 'Записываем рабочие веса в базовых упражнениях.', xp: 400, stat: 'СИЛ', num: '03', id: `d${day}_boss3`, done: false, special: true, inputType: 'workout', data: null },
+      { code: `CHAPTER_${ch.romanNum}_FINALE`, title: 'Босс · Итоги главы', desc: 'Запиши размышления. Это твоя глава, твой опыт.', xp: 500, stat: 'ФОР', num: '04', id: `d${day}_boss4`, done: false, special: true, inputType: 'text', prompt: 'Что ты узнал о себе за эти 21 день? Что будешь делать иначе?', data: null },
     ];
   }
 
-  const ch = getChapterByDay(day);
+  const ch = getChapterByDay(day, mode);
   const pool = MISSION_POOL[ch.name];
   const dayOfWeek = (day - 1) % 7;
   const seed = day * 7919 + 13;
@@ -299,24 +429,109 @@ const generateMissionsForDay = (day) => {
 
 // ============== STATE PERSISTENCE ==============
 const STORAGE_KEY = 'hyp_protocol_v1_state';
+const BACKUP_KEY = 'hyp_protocol_v1_backup';
+const SAVE_LOG_KEY = 'hyp_protocol_v1_log';
+
+// Diagnostic log — last 20 events. Helps debug "data disappeared" reports.
+const logSaveEvent = (kind, detail = '') => {
+  try {
+    const log = JSON.parse(localStorage.getItem(SAVE_LOG_KEY) || '[]');
+    log.push({ t: Date.now(), kind, detail });
+    while (log.length > 20) log.shift();
+    localStorage.setItem(SAVE_LOG_KEY, JSON.stringify(log));
+  } catch (e) {}
+};
+
+// Validate that a parsed state object is structurally usable.
+// CRITICAL: stats CAN be null (during Day 1 calibration). Don't reject on that.
+const isValidState = (s) => {
+  if (!s || typeof s !== 'object') return false;
+  if (!s.startDate) return false;
+  if (!s.profile || typeof s.profile !== 'object') return false;
+  if (!s.profile.name) return false;
+  if (typeof s.daysData !== 'object') return false;
+  // stats may legitimately be null during Day 1 calibration phase
+  return true;
+};
 
 const getInitialState = () => {
+  // Try main key first
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.startDate && parsed.stats && parsed.daysData) return parsed;
+      if (isValidState(parsed)) {
+        logSaveEvent('load_main_ok');
+        return parsed;
+      }
+      logSaveEvent('load_main_invalid', JSON.stringify(parsed).slice(0, 100));
     }
-  } catch (e) {}
-  return null;  // null means: needs onboarding
+  } catch (e) {
+    logSaveEvent('load_main_err', String(e).slice(0, 100));
+  }
+  // Fallback to backup
+  try {
+    const backup = localStorage.getItem(BACKUP_KEY);
+    if (backup) {
+      const parsed = JSON.parse(backup);
+      if (isValidState(parsed)) {
+        logSaveEvent('load_backup_ok');
+        return parsed;
+      }
+    }
+  } catch (e) {
+    logSaveEvent('load_backup_err', String(e).slice(0, 100));
+  }
+  logSaveEvent('load_none');
+  return null;
+};
+
+// Module-level subscribers for save events. UI can subscribe to show toasts.
+const saveListeners = new Set();
+const subscribeSaveEvents = (fn) => {
+  saveListeners.add(fn);
+  return () => saveListeners.delete(fn);
+};
+const emitSaveEvent = (event) => {
+  saveListeners.forEach(fn => { try { fn(event); } catch (e) {} });
 };
 
 const saveState = (state) => {
+  if (!state) return false;
+  const stateWithMeta = { ...state, _savedAt: Date.now() };
+  let serialized;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    serialized = JSON.stringify(stateWithMeta);
   } catch (e) {
-    // Storage might be full from base64 photos — show silent error
-    console.warn('Failed to save state', e);
+    logSaveEvent('serialize_err', String(e).slice(0, 100));
+    emitSaveEvent({ ok: false, reason: 'serialize', error: e });
+    return false;
+  }
+
+  // Estimate size in MB
+  const sizeMB = (serialized.length / 1024 / 1024).toFixed(2);
+
+  // Backup write — keep a second copy as safety net
+  try {
+    const previous = localStorage.getItem(STORAGE_KEY);
+    if (previous) localStorage.setItem(BACKUP_KEY, previous);
+  } catch (e) {
+    // backup is best-effort
+  }
+
+  // Main write
+  try {
+    localStorage.setItem(STORAGE_KEY, serialized);
+    logSaveEvent('save_ok', `${sizeMB}MB`);
+    emitSaveEvent({ ok: true, size: serialized.length, savedAt: stateWithMeta._savedAt });
+    return true;
+  } catch (e) {
+    // Quota exceeded is the most common cause — try cleanup
+    const isQuota = e.name === 'QuotaExceededError' ||
+                    String(e).includes('quota') || String(e).includes('Quota');
+    logSaveEvent('save_err', `${isQuota ? 'QUOTA' : 'OTHER'}: ${String(e).slice(0, 80)}`);
+    emitSaveEvent({ ok: false, reason: isQuota ? 'quota' : 'unknown', error: e, size: serialized.length });
+    return false;
   }
 };
 
@@ -327,6 +542,13 @@ const computeCurrentDay = (startDateISO) => {
   const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const diffDays = Math.floor((nowDay - startDay) / (1000 * 60 * 60 * 24));
   return Math.max(1, Math.min(84, diffDays + 1));
+};
+
+// Format save timestamp for toast: "14:23"
+const formatSaveTime = (ts) => {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
 // ============== SHARED ==============
@@ -379,67 +601,72 @@ function MissionDetail({ mission, onComplete, onAbort }) {
         display: 'flex', flexDirection: 'column',
         position: 'relative',
         minHeight: '100vh',
+        minHeight: '100dvh',
       }}>
         {/* Header */}
         <div style={{
-          padding: '14px 18px',
+          padding: 'calc(14px + env(safe-area-inset-top)) 18px 14px 18px',
           borderBottom: `1px solid ${C.border}`,
           display: 'flex', alignItems: 'center', gap: 12,
         }}>
           <button onClick={onAbort} style={{
             background: 'transparent', border: `1px solid ${C.border}`,
-            color: C.textDim, padding: '8px',
+            color: C.textDim, padding: '12px',
             cursor: 'pointer', clipPath: smallAngleClip,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            minWidth: 48, minHeight: 48,
           }}>
-            <ArrowLeft size={16} strokeWidth={1.8} />
+            <ArrowLeft size={18} strokeWidth={2} />
           </button>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.2em', textTransform: 'uppercase' }}>mission [{mission.num}]</div>
-            <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: '0.06em', marginTop: 2 }}>{mission.code}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.2em', textTransform: 'uppercase' }}>МИССИЯ [{mission.num}]</div>
+            <div style={{ fontFamily: F.display, fontSize: 18, fontWeight: 400, color: C.text, letterSpacing: '0.04em', marginTop: 2, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mission.title || mission.code}</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{ fontFamily: F.mono, fontSize: 14, fontWeight: 700, color: C.yellow }}>+{mission.xp}</span>
-            <span style={{ fontFamily: F.display, fontSize: 9, color: C.textFaint, letterSpacing: '0.18em' }}>→{mission.stat}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+            <span style={{ fontFamily: F.mono, fontSize: 14, fontWeight: 700, color: C.pink }}>+{mission.xp}</span>
+            <span style={{ fontFamily: F.display, fontSize: 11, color: C.textFaint, letterSpacing: '0.18em' }}>→{mission.stat}</span>
           </div>
         </div>
 
         {/* Description */}
         <div style={{ padding: '20px 22px 24px', borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>▸ description</div>
-          <div style={{ fontFamily: F.body, fontSize: 13, color: C.textDim, letterSpacing: '0.08em', lineHeight: 1.6 }}>{mission.desc}</div>
+          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>▸ ОПИСАНИЕ</div>
+          <div style={{ fontFamily: F.body, fontSize: 14, color: C.textDim, letterSpacing: '0.01em', lineHeight: 1.6 }}>{mission.desc}</div>
         </div>
 
         {/* Input area */}
         <div style={{ flex: 1, padding: '24px 18px' }}>
           {mission.inputType === 'workout' && <WorkoutInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'cardio' && <CardioInput mission={mission} data={data} setData={setData} />}
-          {mission.inputType === 'metric' && <MetricInput mission={mission} data={data} setData={setData} />}
+          {mission.inputType === 'metric' && <MetricInput mission={mission} data={data} setData={setData} profile={state?.profile} />}
           {mission.inputType === 'metrics' && <MetricsInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'photo' && <PhotoInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'checkbox' && <CheckboxInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'text' && <TextInput mission={mission} data={data} setData={setData} />}
+          {mission.inputType === 'bodyfat' && <BodyFatInput mission={mission} data={data} setData={setData} profile={state?.profile} />}
+          {mission.inputType === 'timer' && <TimerInput mission={mission} data={data} setData={setData} />}
         </div>
 
         {/* Bottom action */}
-        <div style={{ padding: '16px 18px 32px', borderTop: `1px solid ${C.border}`, background: C.bg }}>
+        <div style={{ padding: '16px 18px calc(16px + env(safe-area-inset-bottom))', borderTop: `1px solid ${C.border}`, background: C.bg }}>
           <button onClick={handleComplete} disabled={!canComplete} style={{
             width: '100%',
-            background: canComplete ? C.yellow : C.surface,
+            background: canComplete ? C.pink : C.surface,
             color: canComplete ? C.bg : C.textFaint,
             border: 'none',
-            padding: '16px',
+            padding: '18px',
             fontFamily: F.display,
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: '0.22em',
+            fontSize: 16,
+            fontWeight: 400,
+            letterSpacing: '0.2em',
             textTransform: 'uppercase',
             cursor: canComplete ? 'pointer' : 'not-allowed',
             clipPath: smallAngleClip,
-            boxShadow: canComplete ? `0 0 20px ${C.yellowGlow}` : 'none',
+            boxShadow: canComplete ? `0 0 20px ${C.pinkGlow}` : 'none',
             transition: 'all 0.3s',
+            minHeight: 52,
           }}>
-            {canComplete ? '▸ mission complete' : '◌ fill required fields'}
+            {canComplete ? '▸ Миссия Завершена' : '◌ Заполни Все Поля'}
           </button>
         </div>
       </div>
@@ -450,7 +677,7 @@ function MissionDetail({ mission, onComplete, onAbort }) {
 const getDefaultData = (mission) => {
   switch (mission.inputType) {
     case 'workout':
-      const exercises = WORKOUT_TEMPLATES[mission.code]?.exercises || ['Exercise 1', 'Exercise 2', 'Exercise 3'];
+      const exercises = WORKOUT_TEMPLATES[mission.code]?.exercises || ['Упражнение 1', 'Упражнение 2', 'Упражнение 3'];
       return {
         exercises: exercises.map(name => ({
           name,
@@ -460,6 +687,7 @@ const getDefaultData = (mission) => {
     case 'cardio':
       return { duration: '', distance: '', notes: '' };
     case 'metric':
+    case 'timer':
       return { value: '' };
     case 'metrics':
       return { values: Object.fromEntries(mission.metrics.map(m => [m.key, ''])) };
@@ -469,27 +697,54 @@ const getDefaultData = (mission) => {
       return { checked: false };
     case 'text':
       return { text: '' };
+    case 'bodyfat':
+      return { level: null, value: null };
     default:
       return {};
   }
 };
 
+const inRange = (val, range) => {
+  if (!range) return true;
+  const n = Number(val);
+  if (!Number.isFinite(n)) return false;
+  if (range.min !== undefined && n < range.min) return false;
+  if (range.max !== undefined && n > range.max) return false;
+  return true;
+};
+
 const validateData = (mission, data) => {
   switch (mission.inputType) {
     case 'workout':
-      return data.exercises?.some(ex => ex.sets.some(s => s.weight && s.reps));
+      return data.exercises?.some(ex => ex.sets.some(s => s.weight && s.reps && Number(s.weight) > 0 && Number(s.reps) > 0));
     case 'cardio':
       return !!data.duration && Number(data.duration) > 0;
-    case 'metric':
-      return !!data.value && Number(data.value) > 0;
+    case 'metric': {
+      if (!data.value) return false;
+      const n = Number(data.value);
+      if (!Number.isFinite(n) || n < 0) return false;
+      return inRange(n, mission.range);
+    }
+    case 'timer': {
+      if (!data.value) return false;
+      const n = Number(data.value);
+      if (!Number.isFinite(n) || n < 0) return false;
+      return inRange(n, mission.range);
+    }
     case 'metrics':
-      return Object.values(data.values).every(v => v && Number(v) > 0);
+      return mission.metrics.every(m => {
+        const v = data.values[m.key];
+        if (!v || Number(v) <= 0) return false;
+        return inRange(v, m.range);
+      });
     case 'photo':
       return data.photos.every(p => p !== null);
     case 'checkbox':
       return data.checked;
     case 'text':
       return data.text && data.text.trim().length >= 5;
+    case 'bodyfat':
+      return !!data.level && !!data.value;
     default:
       return false;
   }
@@ -518,7 +773,7 @@ function WorkoutInput({ mission, data, setData }) {
 
   return (
     <div>
-      <SectionLabel>▸ workout_log</SectionLabel>
+      <SectionLabel>▸ ЖУРНАЛ ТРЕНИРОВКИ</SectionLabel>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {data.exercises.map((ex, exIdx) => (
           <div key={exIdx} style={{
@@ -530,9 +785,9 @@ function WorkoutInput({ mission, data, setData }) {
             </div>
             {/* Set headers */}
             <div style={{ display: 'grid', gridTemplateColumns: '32px 1fr 1fr 28px', gap: 8, marginBottom: 6, fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-              <span>set</span>
-              <span>kg</span>
-              <span>reps</span>
+              <span>подх</span>
+              <span>кг</span>
+              <span>повт</span>
               <span></span>
             </div>
             {ex.sets.map((set, setIdx) => (
@@ -556,7 +811,7 @@ function WorkoutInput({ mission, data, setData }) {
               cursor: 'pointer', clipPath: smallAngleClip,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
             }}>
-              <Plus size={10} strokeWidth={1.8} /> add set
+              <Plus size={10} strokeWidth={1.8} /> добавить подход
             </button>
           </div>
         ))}
@@ -568,7 +823,7 @@ function WorkoutInput({ mission, data, setData }) {
 function CardioInput({ mission, data, setData }) {
   return (
     <div>
-      <SectionLabel>▸ cardio_log</SectionLabel>
+      <SectionLabel>▸ ЖУРНАЛ КАРДИО</SectionLabel>
       <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '16px 18px' }}>
         {mission.target && (
           <div style={{
@@ -581,13 +836,13 @@ function CardioInput({ mission, data, setData }) {
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <FormField label="duration" unit="min">
+          <FormField label="длительность" unit="мин">
             <CompactInput value={data.duration} onChange={v => setData({ ...data, duration: v })} type="number" placeholder="0" />
           </FormField>
-          <FormField label="distance" unit="km" optional>
+          <FormField label="дистанция" unit="км" optional>
             <CompactInput value={data.distance} onChange={v => setData({ ...data, distance: v })} type="number" placeholder="—" step="0.1" />
           </FormField>
-          <FormField label="notes" optional>
+          <FormField label="заметки" optional>
             <CompactInput value={data.notes} onChange={v => setData({ ...data, notes: v })} type="text" placeholder="—" />
           </FormField>
         </div>
@@ -596,36 +851,58 @@ function CardioInput({ mission, data, setData }) {
   );
 }
 
-function MetricInput({ mission, data, setData }) {
+function MetricInput({ mission, data, setData, profile }) {
+  const n = Number(data.value);
+  const isNumber = data.value !== '' && Number.isFinite(n);
+  const range = mission.range;
+  let error = null;
+  if (data.value && !isNumber) error = 'нужно число';
+  else if (isNumber && range) {
+    if (range.min !== undefined && n < range.min) error = `минимум ${range.min}`;
+    else if (range.max !== undefined && n > range.max) error = `максимум ${range.max}`;
+  }
+  const ok = isNumber && !error;
+
   return (
     <div>
-      <SectionLabel>▸ metric_input</SectionLabel>
-      <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '24px 18px' }}>
+      <SectionLabel>▸ ВВОД ПОКАЗАТЕЛЯ</SectionLabel>
+      <div style={{ background: C.bgCard, border: `1px solid ${error ? C.danger : C.border}`, clipPath: smallAngleClip, padding: '24px 18px', transition: 'border-color 0.3s' }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.22em', textTransform: 'uppercase' }}>{mission.metric}</div>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.22em', textTransform: 'uppercase' }}>{mission.metric}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 10 }}>
           <input
             type="number"
+            inputMode="decimal"
             value={data.value}
             onChange={e => setData({ value: e.target.value })}
             placeholder="0"
             style={{
               fontFamily: F.display,
-              fontSize: 56,
-              fontWeight: 700,
-              color: C.yellow,
+              fontSize: 64,
+              fontWeight: 400,
+              color: error ? C.danger : (ok ? C.pink : C.text),
               background: 'transparent',
               border: 'none',
               outline: 'none',
               textAlign: 'center',
-              width: 160,
+              width: 180,
               padding: 0,
-              textShadow: `0 0 18px ${C.yellowGlow}`,
+              textShadow: ok ? `0 0 18px ${C.pinkGlow}` : 'none',
             }}
           />
-          <span style={{ fontFamily: F.display, fontSize: 18, color: C.textDim, letterSpacing: '0.18em' }}>{mission.unit}</span>
+          <span style={{ fontFamily: F.display, fontSize: 22, color: C.textDim, letterSpacing: '0.16em' }}>{mission.unit}</span>
         </div>
+        {range && (
+          <div style={{ marginTop: 14, textAlign: 'center', fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            диапазон: {range.min} — {range.max} {mission.unit}
+          </div>
+        )}
+        {error && (
+          <div style={{ marginTop: 8, textAlign: 'center', fontFamily: F.mono, fontSize: 11, color: C.danger, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            ! {error}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -634,20 +911,45 @@ function MetricInput({ mission, data, setData }) {
 function MetricsInput({ mission, data, setData }) {
   return (
     <div>
-      <SectionLabel>▸ body_metrics</SectionLabel>
+      <SectionLabel>▸ ОБХВАТЫ ТЕЛА</SectionLabel>
       <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '16px 18px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {mission.metrics.map(m => (
-            <FormField key={m.key} label={m.label} unit={m.unit}>
-              <CompactInput
-                value={data.values[m.key]}
-                onChange={v => setData({ ...data, values: { ...data.values, [m.key]: v } })}
-                type="number"
-                placeholder="0"
-                step="0.5"
-              />
-            </FormField>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {mission.metrics.map(m => {
+            const val = data.values[m.key];
+            const n = Number(val);
+            let fieldError = null;
+            if (val && !Number.isFinite(n)) fieldError = 'число';
+            else if (val && m.range) {
+              if (m.range.min !== undefined && n < m.range.min) fieldError = `мин ${m.range.min}`;
+              else if (m.range.max !== undefined && n > m.range.max) fieldError = `макс ${m.range.max}`;
+            }
+            return (
+              <div key={m.key}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontFamily: F.mono, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                  <span style={{ color: C.textDim }}>{m.label}</span>
+                  <span style={{ color: C.textFaint }}>{m.unit}</span>
+                </div>
+                {m.hint && (
+                  <div style={{ fontFamily: F.body, fontSize: 11, color: C.textFaint, marginBottom: 6, lineHeight: 1.4 }}>
+                    {m.hint}
+                  </div>
+                )}
+                <CompactInput
+                  value={val}
+                  onChange={v => setData({ ...data, values: { ...data.values, [m.key]: v } })}
+                  type="number"
+                  placeholder="0"
+                  step="0.5"
+                  error={!!fieldError}
+                />
+                {fieldError && (
+                  <div style={{ marginTop: 4, fontFamily: F.mono, fontSize: 10, color: C.danger, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    ! {fieldError}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -676,7 +978,7 @@ function PhotoInput({ mission, data, setData }) {
 
   return (
     <div>
-      <SectionLabel>▸ photo_capture</SectionLabel>
+      <SectionLabel>▸ ФОТО</SectionLabel>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {data.photos.map((photo, idx) => (
           <div key={idx} style={{
@@ -703,10 +1005,10 @@ function PhotoInput({ mission, data, setData }) {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: F.display, fontSize: 12, fontWeight: 600, color: C.text, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                {mission.angles?.[idx] || `photo ${idx + 1}`}
+                {mission.angles?.[idx] || `фото ${idx + 1}`}
               </div>
               <div style={{ fontFamily: F.mono, fontSize: 9, color: photo ? C.success : C.textFaint, letterSpacing: '0.18em', marginTop: 4, textTransform: 'uppercase' }}>
-                {photo ? '✓ captured' : 'awaiting capture'}
+                {photo ? '✓ снято' : 'ожидает съёмки'}
               </div>
             </div>
             <input
@@ -741,7 +1043,7 @@ function PhotoInput({ mission, data, setData }) {
         ))}
       </div>
       <div style={{ marginTop: 14, fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'center' }}>
-        photos stored locally · never uploaded
+        фото хранятся только на твоём телефоне
       </div>
     </div>
   );
@@ -750,7 +1052,7 @@ function PhotoInput({ mission, data, setData }) {
 function CheckboxInput({ mission, data, setData }) {
   return (
     <div>
-      <SectionLabel>▸ confirm_action</SectionLabel>
+      <SectionLabel>▸ ПОДТВЕРДИ ДЕЙСТВИЕ</SectionLabel>
       <button
         onClick={() => setData({ checked: !data.checked })}
         style={{
@@ -777,10 +1079,10 @@ function CheckboxInput({ mission, data, setData }) {
           {data.checked && <Check size={32} strokeWidth={3} color={C.bg} />}
         </div>
         <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-          {data.checked ? 'confirmed' : 'tap to confirm'}
+          {data.checked ? 'подтверждено' : 'нажми чтобы подтвердить'}
         </div>
         <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.15em', marginTop: 8, textTransform: 'uppercase' }}>
-          honor system · self-reported
+          система чести · сам себе судья
         </div>
       </button>
     </div>
@@ -790,7 +1092,7 @@ function CheckboxInput({ mission, data, setData }) {
 function TextInput({ mission, data, setData }) {
   return (
     <div>
-      <SectionLabel>▸ reflection</SectionLabel>
+      <SectionLabel>▸ РАЗМЫШЛЕНИЕ</SectionLabel>
       <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '16px 18px' }}>
         {mission.prompt && (
           <div style={{
@@ -806,7 +1108,7 @@ function TextInput({ mission, data, setData }) {
         <textarea
           value={data.text}
           onChange={e => setData({ text: e.target.value })}
-          placeholder="write your answer..."
+          placeholder="напиши свой ответ..."
           rows={6}
           style={{
             width: '100%',
@@ -822,9 +1124,231 @@ function TextInput({ mission, data, setData }) {
             clipPath: smallAngleClip,
           }}
         />
-        <div style={{ marginTop: 8, fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'right' }}>
-          {data.text.length} chars · min 5
+        <div style={{ marginTop: 8, fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'right' }}>
+          {data.text.length} символов · мин. 5
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============== BODY FAT VISUAL SELECTOR ==============
+// Renders 6 silhouettes with body fat estimates. User picks closest match.
+function BodyFatInput({ mission, data, setData, profile }) {
+  const gender = profile?.gender || 'male';
+  const levels = BODY_FAT_LEVELS[gender] || BODY_FAT_LEVELS.male;
+
+  return (
+    <div>
+      <SectionLabel>▸ ОЦЕНКА ПРОЦЕНТА ЖИРА</SectionLabel>
+      <div style={{
+        background: C.bgCard, border: `1px solid ${C.border}`,
+        clipPath: smallAngleClip, padding: '14px',
+        marginBottom: 12,
+        fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.5,
+      }}>
+        Посмотри в зеркало без одежды или в обтягивающей одежде. Выбери силуэт, который больше всего похож на твою текущую форму.
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {levels.map(lvl => {
+          const selected = data.level === lvl.id;
+          return (
+            <button
+              key={lvl.id}
+              onClick={() => setData({ level: lvl.id, value: lvl.value })}
+              style={{
+                background: selected ? `${C.pink}15` : C.bgCard,
+                border: `1px solid ${selected ? C.pink : C.border}`,
+                clipPath: smallAngleClip, padding: '12px 10px 14px',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                boxShadow: selected ? `0 0 14px ${C.pinkSoft}` : 'none',
+                color: 'inherit', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                minHeight: 180,
+              }}
+            >
+              <BodyFatSilhouette level={lvl.id} gender={gender} selected={selected} />
+              <div>
+                <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 400, color: selected ? C.pink : C.text, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  {lvl.label}
+                </div>
+                <div style={{ fontFamily: F.mono, fontSize: 11, color: selected ? C.pink : C.textFaint, marginTop: 4, letterSpacing: '0.1em' }}>
+                  {lvl.range}
+                </div>
+                <div style={{ fontFamily: F.body, fontSize: 11, color: C.textFaint, marginTop: 6, lineHeight: 1.4 }}>
+                  {lvl.desc}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Silhouette SVG: stylised body shape that gets wider as body fat increases
+function BodyFatSilhouette({ level, gender, selected }) {
+  // bodyWidth grows with fat percentage
+  const widths = {
+    shredded: 0.55, athletic: 0.62, fit: 0.7,
+    average: 0.78, soft: 0.88, overweight: 1.0,
+  };
+  const w = widths[level] || 0.7;
+  const color = selected ? C.pink : C.textDim;
+
+  // Different proportions for genders
+  const isFemale = gender === 'female';
+  const waistFactor = isFemale ? 0.78 : 0.85;
+  const hipFactor = isFemale ? 1.05 : 0.95;
+
+  const baseWidth = 22 * w;
+  const waistW = baseWidth * waistFactor;
+  const hipW = baseWidth * hipFactor;
+  const shoulderW = baseWidth;
+
+  return (
+    <svg width="60" height="84" viewBox="0 0 60 84" fill="none">
+      {/* head */}
+      <circle cx="30" cy="10" r="6" stroke={color} strokeWidth="1.5" fill="none" />
+      {/* body */}
+      <path
+        d={`
+          M ${30 - shoulderW * 0.5},20
+          L ${30 - shoulderW * 0.6},32
+          L ${30 - waistW * 0.5},48
+          L ${30 - hipW * 0.55},62
+          L ${30 - hipW * 0.4},78
+          L ${30 - hipW * 0.18},78
+          L ${30 - hipW * 0.1},64
+          L ${30 + hipW * 0.1},64
+          L ${30 + hipW * 0.18},78
+          L ${30 + hipW * 0.4},78
+          L ${30 + hipW * 0.55},62
+          L ${30 + waistW * 0.5},48
+          L ${30 + shoulderW * 0.6},32
+          L ${30 + shoulderW * 0.5},20
+          Z
+        `}
+        stroke={color}
+        strokeWidth="1.5"
+        fill={selected ? `${color}22` : 'none'}
+      />
+    </svg>
+  );
+}
+
+// ============== TIMER INPUT (for plank, etc.) ==============
+function TimerInput({ mission, data, setData }) {
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(data.value ? Number(data.value) : 0);
+  const startRef = useRef(null);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      const sec = Math.floor((Date.now() - startRef.current) / 1000);
+      setElapsed(sec);
+    }, 100);
+    return () => clearInterval(id);
+  }, [running]);
+
+  const start = () => {
+    startRef.current = Date.now() - elapsed * 1000;
+    setRunning(true);
+  };
+
+  const stop = () => {
+    setRunning(false);
+    setData({ value: String(elapsed) });
+  };
+
+  const reset = () => {
+    setRunning(false);
+    setElapsed(0);
+    setData({ value: '' });
+  };
+
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+
+  return (
+    <div>
+      <SectionLabel>▸ СЕКУНДОМЕР</SectionLabel>
+      <div style={{
+        background: C.bgCard, border: `1px solid ${running ? C.pink : C.border}`,
+        clipPath: smallAngleClip, padding: '32px 18px',
+        textAlign: 'center',
+        boxShadow: running ? `0 0 20px ${C.pinkSoft}` : 'none',
+        transition: 'all 0.3s',
+      }}>
+        <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>
+          {mission.metric || 'таймер'}
+        </div>
+        <div style={{
+          fontFamily: F.mono, fontSize: 64, fontWeight: 700,
+          color: running ? C.pink : C.text,
+          textShadow: running ? `0 0 20px ${C.pinkGlow}` : 'none',
+          letterSpacing: '0.04em', lineHeight: 1,
+          marginBottom: 6,
+        }}>
+          {mm}:{ss}
+        </div>
+        <div style={{ fontFamily: F.mono, fontSize: 12, color: C.textFaint, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 24 }}>
+          {elapsed} сек
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          {!running && elapsed === 0 && (
+            <button onClick={start} style={{
+              background: C.pink, color: C.bg, border: 'none',
+              padding: '14px 32px', cursor: 'pointer',
+              fontFamily: F.display, fontSize: 16, fontWeight: 400,
+              letterSpacing: '0.2em', textTransform: 'uppercase',
+              clipPath: smallAngleClip, minHeight: 48,
+              boxShadow: `0 0 16px ${C.pinkGlow}`,
+            }}>▸ Старт</button>
+          )}
+          {running && (
+            <button onClick={stop} style={{
+              background: C.danger, color: '#fff', border: 'none',
+              padding: '14px 32px', cursor: 'pointer',
+              fontFamily: F.display, fontSize: 16, fontWeight: 400,
+              letterSpacing: '0.2em', textTransform: 'uppercase',
+              clipPath: smallAngleClip, minHeight: 48,
+              boxShadow: `0 0 16px rgba(255, 71, 87, 0.55)`,
+            }}>■ Стоп</button>
+          )}
+          {!running && elapsed > 0 && (
+            <>
+              <button onClick={start} style={{
+                background: C.teal, color: C.bg, border: 'none',
+                padding: '14px 24px', cursor: 'pointer',
+                fontFamily: F.display, fontSize: 14, fontWeight: 400,
+                letterSpacing: '0.18em', textTransform: 'uppercase',
+                clipPath: smallAngleClip, minHeight: 48,
+              }}>▸ Продолжить</button>
+              <button onClick={reset} style={{
+                background: 'transparent', color: C.textDim,
+                border: `1px solid ${C.border}`,
+                padding: '14px 24px', cursor: 'pointer',
+                fontFamily: F.display, fontSize: 14, fontWeight: 400,
+                letterSpacing: '0.18em', textTransform: 'uppercase',
+                clipPath: smallAngleClip, minHeight: 48,
+              }}>↻ Сброс</button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div style={{
+        marginTop: 12,
+        fontFamily: F.mono, fontSize: 11, color: C.textFaint,
+        letterSpacing: '0.12em', textAlign: 'center',
+      }}>
+        Останови таймер когда форма ломается
       </div>
     </div>
   );
@@ -832,7 +1356,7 @@ function TextInput({ mission, data, setData }) {
 
 // ============== INPUT PRIMITIVES ==============
 
-function CompactInput({ value, onChange, type = 'text', placeholder, step }) {
+function CompactInput({ value, onChange, type = 'text', placeholder, step, error }) {
   return (
     <input
       type={type}
@@ -840,21 +1364,23 @@ function CompactInput({ value, onChange, type = 'text', placeholder, step }) {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       step={step}
+      inputMode={type === 'number' ? 'decimal' : undefined}
       style={{
         background: C.surface,
-        border: `1px solid ${C.border}`,
+        border: `1px solid ${error ? C.danger : C.border}`,
         color: C.text,
         fontFamily: F.mono,
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: 500,
-        padding: '8px 10px',
+        padding: '12px 14px',
         outline: 'none',
         width: '100%',
         textAlign: 'center',
         minWidth: 0,
+        minHeight: 48,
       }}
-      onFocus={e => e.target.style.borderColor = C.yellow}
-      onBlur={e => e.target.style.borderColor = C.border}
+      onFocus={e => e.target.style.borderColor = error ? C.danger : C.pink}
+      onBlur={e => e.target.style.borderColor = error ? C.danger : C.border}
     />
   );
 }
@@ -864,7 +1390,7 @@ function FormField({ label, unit, optional, children }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
         <span style={{ color: C.textDim }}>
-          {label}{optional && <span style={{ color: C.textFaint }}> · optional</span>}
+          {label}{optional && <span style={{ color: C.textFaint }}> · опционально</span>}
         </span>
         {unit && <span style={{ color: C.textFaint }}>{unit}</span>}
       </div>
@@ -882,43 +1408,64 @@ function SectionLabel({ children }) {
 }
 
 // ============== ONBOARDING FLOW ==============
+// Compact 5-step onboarding. NO experience self-assessment, NO ovr target slider.
+// Just basic bio + class + letter. OVR is calculated after Day 1 calibration trial.
+
+// VALIDATION HELPERS
+const VALID = {
+  name: (v) => {
+    const t = (v || '').trim();
+    if (t.length < 2 || t.length > 16) return 'имя 2-16 символов';
+    if (!/^[a-zA-Zа-яА-ЯёЁ0-9\s\-]+$/.test(t)) return 'только буквы, цифры, пробел, дефис';
+    return null;
+  },
+  age: (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || !Number.isInteger(n)) return 'целое число';
+    if (n < 13) return 'минимум 13 лет';
+    if (n > 90) return 'максимум 90 лет';
+    return null;
+  },
+  height: (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 'число';
+    if (n < 120) return 'минимум 120 см';
+    if (n > 220) return 'максимум 220 см';
+    return null;
+  },
+  weight: (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 'число';
+    if (n < 30) return 'минимум 30 кг';
+    if (n > 250) return 'максимум 250 кг';
+    return null;
+  },
+};
 
 function OnboardingFlow({ onComplete }) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({
     name: '', classCode: 'HYP',
     age: '', gender: '', height: '', weight: '',
-    experienceLevel: null, ovrTarget: null,
   });
 
   const updateProfile = (patch) => setProfile(p => ({ ...p, ...patch }));
   const next = () => setStep(s => s + 1);
   const back = () => setStep(s => Math.max(0, s - 1));
 
-  const startingStats = useMemo(() => {
-    if (!profile.age || !profile.height || !profile.weight || profile.experienceLevel === null) return null;
-    return calibrateStartingStats({
-      age: Number(profile.age),
-      height: Number(profile.height),
-      weight: Number(profile.weight),
-      experienceLevel: profile.experienceLevel,
-    });
-  }, [profile.age, profile.height, profile.weight, profile.experienceLevel]);
-
-  const startingOVR = startingStats ? calcOVR(startingStats) : 0;
-
   const handleComplete = () => {
-    const goals = calibrateGoals(startingStats, profile.ovrTarget);
     const fullState = {
       startDate: new Date().toISOString(),
-      stats: startingStats,
-      goals,
+      stats: null,  // null until Day 1 calibration completes
+      goals: null,
+      mode: null,   // 'mass' or 'recomp', set after Day 1
       profile: {
-        name: profile.name, classCode: profile.classCode,
-        age: Number(profile.age), gender: profile.gender,
-        height: Number(profile.height), weight: Number(profile.weight),
-        experienceLevel: profile.experienceLevel,
-        ovrTarget: profile.ovrTarget, startingOVR,
+        name: profile.name.trim(),
+        classCode: profile.classCode,
+        age: Number(profile.age),
+        gender: profile.gender,
+        height: Number(profile.height),
+        weight: Number(profile.weight),
       },
       daysData: {}, totalXP: 0,
     };
@@ -928,43 +1475,44 @@ function OnboardingFlow({ onComplete }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: C.bg,
-      backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
+      minHeight: '100vh', minHeight: '100dvh', background: C.bg,
+      backgroundImage: \`linear-gradient(rgba(255,46,99,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,46,99,0.025) 1px, transparent 1px)\`,
       backgroundSize: '24px 24px',
       color: C.text, fontFamily: F.body,
       display: 'flex', justifyContent: 'center',
       position: 'relative', overflow: 'hidden',
+      paddingTop: 'env(safe-area-inset-top)',
+      paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
       <div key={step} style={{
         position: 'absolute', left: 0, right: 0,
-        height: 2, background: `linear-gradient(to bottom, transparent, ${C.yellow}, transparent)`,
+        height: 2, background: \`linear-gradient(to bottom, transparent, \${C.pink}, transparent)\`,
         animation: 'scan 1.4s ease-out 1', opacity: 0.6,
         pointerEvents: 'none', zIndex: 100,
       }} />
       <div style={{
-        width: '100%', maxWidth: 440, minHeight: '100vh',
-        background: C.bgPanel,
-        display: 'flex', flexDirection: 'column', position: 'relative',
+        width: '100%', maxWidth: 440, minHeight: '100vh', minHeight: '100dvh',
+        background: C.bgPanel, display: 'flex', flexDirection: 'column', position: 'relative',
       }}>
         <div style={{
-          padding: '14px 18px',
+          padding: '16px 18px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          fontFamily: F.mono, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase',
+          fontFamily: F.mono, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.success, animation: 'blink 2s infinite' }} />
-            <span style={{ color: C.success }}>system online</span>
+            <span style={{ color: C.success }}>на связи</span>
           </div>
-          <div style={{ color: C.textFaint }}>onboarding</div>
-          <div style={{ color: C.yellow }}>{String(step + 1).padStart(2, '0')} / 06</div>
+          <div style={{ color: C.textFaint }}>создание героя</div>
+          <div style={{ color: C.pink }}>{String(step + 1).padStart(2, '0')} / 05</div>
         </div>
 
         <div style={{ padding: '0 18px', display: 'flex', gap: 4, marginBottom: 8 }}>
-          {[0, 1, 2, 3, 4, 5].map(i => (
+          {[0, 1, 2, 3, 4].map(i => (
             <div key={i} style={{
               flex: 1, height: 2,
-              background: i <= step ? C.yellow : C.surface,
-              boxShadow: i === step ? `0 0 6px ${C.yellowGlow}` : 'none',
+              background: i <= step ? C.pink : C.surface,
+              boxShadow: i === step ? \`0 0 6px \${C.pinkGlow}\` : 'none',
               transition: 'all 0.4s',
             }} />
           ))}
@@ -974,52 +1522,57 @@ function OnboardingFlow({ onComplete }) {
           {step === 0 && <StepHero onNext={next} />}
           {step === 1 && <StepClass profile={profile} updateProfile={updateProfile} onNext={next} onBack={back} />}
           {step === 2 && <StepBio profile={profile} updateProfile={updateProfile} onNext={next} onBack={back} />}
-          {step === 3 && <StepExperience profile={profile} updateProfile={updateProfile} onNext={next} onBack={back} startingOVR={startingOVR} />}
-          {step === 4 && <StepGoal profile={profile} updateProfile={updateProfile} onNext={next} onBack={back} startingOVR={startingOVR} startingStats={startingStats} />}
-          {step === 5 && <StepLetter profile={profile} startingOVR={startingOVR} onComplete={handleComplete} onBack={back} />}
+          {step === 3 && <StepBriefing profile={profile} onNext={next} onBack={back} />}
+          {step === 4 && <StepLetter profile={profile} onComplete={handleComplete} onBack={back} />}
         </div>
       </div>
     </div>
   );
 }
 
-function OnbHeader({ subtitle, title, accent = C.yellow }) {
+function OnbHeader({ subtitle, title, accent }) {
+  const c = accent || C.pink;
   return (
     <div style={{ padding: '32px 22px 0' }}>
-      <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.25em', textTransform: 'uppercase' }}>─── {subtitle}</div>
-      <h1 style={{ fontFamily: F.display, fontSize: 36, fontWeight: 700, letterSpacing: '0.04em', marginTop: 10, lineHeight: 1, color: accent, textTransform: 'uppercase', textShadow: accent === C.yellow ? `0 0 20px ${C.yellowGlow}` : 'none' }}>
-        {title}
-      </h1>
+      <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.25em', textTransform: 'uppercase' }}>─── {subtitle}</div>
+      <h1 style={{
+        fontFamily: F.display, fontSize: 44, fontWeight: 400, letterSpacing: '0.02em',
+        marginTop: 10, lineHeight: 0.95, color: c, textTransform: 'uppercase',
+        textShadow: \`0 0 20px \${c}aa\`,
+      }}>{title}</h1>
     </div>
   );
 }
 
-function OnbFooter({ onNext, onBack, nextLabel = '▸ continue', nextDisabled = false }) {
+function OnbFooter({ onNext, onBack, nextLabel = '▸ продолжить', nextDisabled = false }) {
   return (
-    <div style={{ padding: '20px 18px 32px', borderTop: `1px solid ${C.border}`, background: C.bg, display: 'flex', gap: 8 }}>
+    <div style={{
+      padding: '20px 18px',
+      paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
+      borderTop: \`1px solid \${C.border}\`, background: C.bg, display: 'flex', gap: 8,
+    }}>
       {onBack && (
         <button onClick={onBack} style={{
-          background: 'transparent', border: `1px solid ${C.border}`,
+          background: 'transparent', border: \`1px solid \${C.border}\`,
           color: C.textDim, padding: '14px 18px',
-          fontFamily: F.display, fontSize: 11, fontWeight: 700,
-          letterSpacing: '0.22em', textTransform: 'uppercase',
+          fontFamily: F.display, fontSize: 14, fontWeight: 400,
+          letterSpacing: '0.16em', textTransform: 'uppercase',
           cursor: 'pointer', clipPath: smallAngleClip,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <ArrowLeft size={14} strokeWidth={2} />
-        </button>
+          minHeight: 48, minWidth: 48,
+        }}>← НАЗАД</button>
       )}
       <button onClick={onNext} disabled={nextDisabled} style={{
         flex: 1,
-        background: nextDisabled ? C.surface : C.yellow,
+        background: nextDisabled ? C.surface : C.pink,
         color: nextDisabled ? C.textFaint : C.bg,
         border: 'none', padding: '14px',
-        fontFamily: F.display, fontSize: 12, fontWeight: 700,
-        letterSpacing: '0.22em', textTransform: 'uppercase',
+        fontFamily: F.display, fontSize: 16, fontWeight: 400,
+        letterSpacing: '0.18em', textTransform: 'uppercase',
         cursor: nextDisabled ? 'not-allowed' : 'pointer',
         clipPath: smallAngleClip,
-        boxShadow: nextDisabled ? 'none' : `0 0 16px ${C.yellowGlow}`,
-        transition: 'all 0.3s',
+        boxShadow: nextDisabled ? 'none' : \`0 0 18px \${C.pinkGlow}\`,
+        transition: 'all 0.3s', minHeight: 48,
       }}>{nextLabel}</button>
     </div>
   );
@@ -1035,25 +1588,23 @@ function StepHero({ onNext }) {
       <div style={{
         fontFamily: F.mono, fontSize: 11, color: C.textFaint,
         letterSpacing: '0.4em', textTransform: 'uppercase',
-        opacity: revealed ? 1 : 0, transition: 'opacity 0.6s ease',
-        marginBottom: 24,
-      }}>welcome to</div>
+        opacity: revealed ? 1 : 0, transition: 'opacity 0.6s ease', marginBottom: 24,
+      }}>добро пожаловать</div>
       <h1 style={{
-        fontFamily: F.display, fontSize: 48, fontWeight: 700,
-        color: C.yellow, letterSpacing: '0.06em',
-        textShadow: `0 0 28px ${C.yellowGlow}`,
+        fontFamily: F.display, fontSize: 60, fontWeight: 400,
+        color: C.pink, letterSpacing: '0.02em',
+        textShadow: \`0 0 32px \${C.pinkGlow}\`,
         opacity: revealed ? 1 : 0,
         transform: revealed ? 'translateY(0)' : 'translateY(8px)',
         transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s',
-        margin: 0, lineHeight: 1,
-      }}>HYP_PROTOCOL</h1>
+        margin: 0, lineHeight: 0.9,
+      }}>ГИПЕР<br/>ПРОТОКОЛ</h1>
       <div style={{
-        fontFamily: F.mono, fontSize: 10, color: C.cyan,
+        fontFamily: F.mono, fontSize: 11, color: C.teal,
         letterSpacing: '0.4em', textTransform: 'uppercase',
-        marginTop: 14,
-        opacity: revealed ? 1 : 0,
-        transition: 'opacity 0.8s ease 0.5s',
-      }}>v1 :: hypertrophy edition</div>
+        marginTop: 18,
+        opacity: revealed ? 1 : 0, transition: 'opacity 0.8s ease 0.5s',
+      }}>v1 · издание гипертрофии</div>
       <div style={{
         marginTop: 56,
         opacity: revealed ? 1 : 0,
@@ -1061,76 +1612,78 @@ function StepHero({ onNext }) {
         transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.7s',
         maxWidth: 320,
       }}>
-        <div style={{ fontFamily: F.display, fontSize: 22, color: C.text, letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.3, marginBottom: 18 }}>
-          Your life.<br/>
-          <span style={{ color: C.yellow, textShadow: `0 0 14px ${C.yellowGlow}` }}>Played.</span>
+        <div style={{ fontFamily: F.display, fontSize: 28, color: C.text, letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.2, marginBottom: 18 }}>
+          Твоя жизнь.<br/>
+          <span style={{ color: C.pink, textShadow: \`0 0 14px \${C.pinkGlow}\` }}>Сыграна.</span>
         </div>
         <p style={{ fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
-          84 дня. Один класс. Один путь от Bronze до Gold.<br/>
-          Это не трекер. Это кампания.
+          84 дня. Один путь. От бронзы до золота.<br/>
+          Это не трекер. Это игра.
         </p>
       </div>
       <div style={{ flex: 1 }} />
       <button onClick={onNext} style={{
-        background: C.yellow, color: C.bg, border: 'none',
-        padding: '16px 40px', cursor: 'pointer',
-        fontFamily: F.display, fontSize: 13, fontWeight: 700,
-        letterSpacing: '0.28em', textTransform: 'uppercase',
+        background: C.pink, color: C.bg, border: 'none',
+        padding: '18px 48px', cursor: 'pointer',
+        fontFamily: F.display, fontSize: 18, fontWeight: 400,
+        letterSpacing: '0.24em', textTransform: 'uppercase',
         clipPath: smallAngleClip,
-        boxShadow: `0 0 28px ${C.yellowGlow}`,
+        boxShadow: \`0 0 32px \${C.pinkGlow}\`,
         opacity: revealed ? 1 : 0,
         transform: revealed ? 'translateY(0)' : 'translateY(12px)',
         transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1s',
-      }}>▸ initialize</button>
+        minHeight: 52,
+      }}>▸ Начать</button>
+      <div style={{ height: 32 }} />
     </div>
   );
 }
 
 function StepClass({ profile, updateProfile, onNext, onBack }) {
   const classes = [
-    { code: 'HYP', name: 'Hypertrophy', desc: 'mass + strength + form', locked: false, color: C.yellow },
-    { code: 'CDE', name: 'Code', desc: 'engineering · 84 days to ship', locked: true, color: C.cyan },
-    { code: 'MUS', name: 'Music', desc: 'instrument mastery', locked: true, color: C.magenta },
-    { code: 'LNG', name: 'Language', desc: 'fluency in 84 days', locked: true, color: C.success },
+    { code: 'HYP', name: 'Гипертрофия', desc: 'мышцы · сила · форма', locked: false, color: C.pink },
+    { code: 'CDE', name: 'Код', desc: 'разработка · 84 дня до релиза', locked: true, color: C.teal },
+    { code: 'MUS', name: 'Музыка', desc: 'игра на инструменте', locked: true, color: C.gold },
+    { code: 'LNG', name: 'Язык', desc: 'свободно за 84 дня', locked: true, color: C.success },
   ];
 
   return (
     <>
-      <OnbHeader subtitle="step 01 · class" title="Choose Your Path" />
+      <OnbHeader subtitle="шаг 01 · класс" title="Выбери Путь" />
       <p style={{ padding: '0 22px', marginTop: 14, fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>
-        Каждый класс — отдельная 84-дневная кампания. Сейчас доступен только HYP.
+        Каждый класс — отдельная 84-дневная игра. Сейчас доступна только Гипертрофия. Остальные откроются позже.
       </p>
       <div style={{ padding: '28px 18px 0', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
         {classes.map(c => {
           const selected = profile.classCode === c.code;
           return (
             <button key={c.code} onClick={() => !c.locked && updateProfile({ classCode: c.code })} disabled={c.locked} style={{
-              background: selected ? `${c.color}15` : C.bgCard,
-              border: `1px solid ${selected ? c.color : C.border}`,
-              clipPath: smallAngleClip, padding: '16px 18px',
+              background: selected ? \`\${c.color}15\` : C.bgCard,
+              border: \`1px solid \${selected ? c.color : C.border}\`,
+              clipPath: smallAngleClip, padding: '18px',
               display: 'flex', alignItems: 'center', gap: 14,
               cursor: c.locked ? 'not-allowed' : 'pointer',
               opacity: c.locked ? 0.45 : 1,
-              transition: 'all 0.3s',
-              boxShadow: selected ? `0 0 14px ${c.color}55` : 'none',
-              color: 'inherit',
+              transition: 'all 0.3s', textAlign: 'left',
+              boxShadow: selected ? \`0 0 14px \${c.color}55\` : 'none',
+              color: 'inherit', minHeight: 72,
             }}>
               <div style={{
-                width: 52, height: 52,
-                background: selected ? `${c.color}22` : C.surface,
-                border: `1px solid ${selected ? c.color : C.border}`,
+                width: 56, height: 56,
+                background: selected ? \`\${c.color}22\` : C.surface,
+                border: \`1px solid \${selected ? c.color : C.border}\`,
                 clipPath: smallAngleClip,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: F.display, fontSize: 18, fontWeight: 700,
+                fontFamily: F.display, fontSize: 22, fontWeight: 400,
                 color: c.locked ? C.textFaint : c.color, flexShrink: 0,
-              }}>{c.locked ? <Lock size={18} strokeWidth={1.6} /> : c.code}</div>
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{c.name}</div>
-                <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.15em', marginTop: 4, textTransform: 'uppercase' }}>{c.desc}</div>
+              }}>{c.locked ? <Lock size={20} strokeWidth={1.6} /> : c.code}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: F.display, fontSize: 20, fontWeight: 400, color: C.text, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{c.name}</div>
+                <div style={{ fontFamily: F.body, fontSize: 12, color: C.textFaint, marginTop: 4 }}>{c.desc}</div>
               </div>
               {selected && (
-                <div style={{ width: 22, height: 22, borderRadius: '50%', background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Check size={12} strokeWidth={3} color={C.bg} />
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Check size={14} strokeWidth={3} color={C.bg} />
                 </div>
               )}
             </button>
@@ -1142,240 +1695,162 @@ function StepClass({ profile, updateProfile, onNext, onBack }) {
   );
 }
 
-function BioField({ label, hint, unit, children }) {
+function ValidatedField({ label, hint, unit, value, onChange, validator, type = 'text', placeholder, maxLength }) {
+  const [touched, setTouched] = useState(false);
+  const error = touched && value ? validator(value) : null;
+  const ok = value && !validator(value);
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: F.mono, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
         <span style={{ color: C.textDim }}>{label}{hint && <span style={{ color: C.textFaint }}> · {hint}</span>}</span>
         {unit && <span style={{ color: C.textFaint }}>{unit}</span>}
       </div>
-      {children}
+      <input
+        type={type} value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={() => setTouched(true)}
+        placeholder={placeholder} maxLength={maxLength}
+        inputMode={type === 'number' ? 'numeric' : undefined}
+        style={{
+          background: C.surface, border: \`1px solid \${error ? C.danger : ok ? C.teal : C.border}\`,
+          color: C.text, fontFamily: F.mono, fontSize: 16, fontWeight: 500,
+          padding: '12px 14px', outline: 'none', width: '100%', textAlign: 'center',
+          minHeight: 48,
+        }}
+        onFocus={e => { e.target.style.borderColor = error ? C.danger : C.pink; }}
+      />
+      {error && (
+        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.danger, marginTop: 4, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          ! {error}
+        </div>
+      )}
     </div>
   );
 }
 
-function OnbInput({ value, onChange, type = 'text', placeholder, step, maxLength }) {
-  return (
-    <input
-      type={type} value={value} onChange={e => onChange(e.target.value)}
-      placeholder={placeholder} step={step} maxLength={maxLength}
-      style={{
-        background: C.surface, border: `1px solid ${C.border}`,
-        color: C.text, fontFamily: F.mono, fontSize: 14, fontWeight: 500,
-        padding: '10px 12px', outline: 'none', width: '100%', textAlign: 'center',
-      }}
-      onFocus={e => e.target.style.borderColor = C.yellow}
-      onBlur={e => e.target.style.borderColor = C.border}
-    />
-  );
-}
-
 function StepBio({ profile, updateProfile, onNext, onBack }) {
-  const valid = profile.name.trim() && profile.age && profile.height && profile.weight && profile.gender;
+  const errors = {
+    name: VALID.name(profile.name),
+    age: VALID.age(profile.age),
+    height: VALID.height(profile.height),
+    weight: VALID.weight(profile.weight),
+  };
+  const valid = !errors.name && !errors.age && !errors.height && !errors.weight && profile.gender;
+
   return (
     <>
-      <OnbHeader subtitle="step 02 · bio" title="Agent Data" />
+      <OnbHeader subtitle="шаг 02 · анкета" title="Данные Героя" />
       <p style={{ padding: '0 22px', marginTop: 14, fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>
-        Эти данные используются только локально. Они калибруют твои стартовые статы и нутри-цели.
+        Хранятся только на твоём телефоне. Не отправляются никуда. Используются для расчёта стартовых параметров.
       </p>
       <div style={{ padding: '28px 18px 0', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <BioField label="codename" hint="как тебя звать в игре">
-          <OnbInput value={profile.name} onChange={v => updateProfile({ name: v })} type="text" placeholder="напр. КИРИЛЛ" maxLength={16} />
-        </BioField>
+        <ValidatedField
+          label="имя" hint="как тебя называть"
+          value={profile.name}
+          onChange={v => updateProfile({ name: v })}
+          validator={VALID.name}
+          type="text" placeholder="напр. МАКС" maxLength={16}
+        />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <BioField label="age" unit="yrs">
-            <OnbInput value={profile.age} onChange={v => updateProfile({ age: v })} type="number" placeholder="—" />
-          </BioField>
-          <BioField label="gender">
+          <ValidatedField
+            label="возраст" unit="лет"
+            value={profile.age}
+            onChange={v => updateProfile({ age: v })}
+            validator={VALID.age}
+            type="number" placeholder="—"
+          />
+          <div>
+            <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textDim, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6 }}>пол</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {['M', 'F', 'X'].map(g => (
-                <button key={g} onClick={() => updateProfile({ gender: g })} style={{
+              {[
+                { id: 'male', label: 'М' },
+                { id: 'female', label: 'Ж' },
+                { id: 'nb', label: 'NB' },
+              ].map(g => (
+                <button key={g.id} onClick={() => updateProfile({ gender: g.id })} style={{
                   flex: 1,
-                  background: profile.gender === g ? C.yellow : C.surface,
-                  border: `1px solid ${profile.gender === g ? C.yellow : C.border}`,
-                  color: profile.gender === g ? C.bg : C.text,
-                  fontFamily: F.display, fontSize: 12, fontWeight: 700,
-                  letterSpacing: '0.18em', padding: '8px 0',
+                  background: profile.gender === g.id ? C.pink : C.surface,
+                  border: \`1px solid \${profile.gender === g.id ? C.pink : C.border}\`,
+                  color: profile.gender === g.id ? C.bg : C.text,
+                  fontFamily: F.display, fontSize: 16, fontWeight: 400,
+                  letterSpacing: '0.18em', padding: '12px 0',
                   cursor: 'pointer', clipPath: smallAngleClip, transition: 'all 0.3s',
-                }}>{g}</button>
+                  minHeight: 48,
+                }}>{g.label}</button>
               ))}
             </div>
-          </BioField>
+          </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <BioField label="height" unit="cm">
-            <OnbInput value={profile.height} onChange={v => updateProfile({ height: v })} type="number" placeholder="—" />
-          </BioField>
-          <BioField label="weight" unit="kg">
-            <OnbInput value={profile.weight} onChange={v => updateProfile({ weight: v })} type="number" placeholder="—" step="0.1" />
-          </BioField>
+          <ValidatedField
+            label="рост" unit="см"
+            value={profile.height}
+            onChange={v => updateProfile({ height: v })}
+            validator={VALID.height}
+            type="number" placeholder="—"
+          />
+          <ValidatedField
+            label="вес" unit="кг"
+            value={profile.weight}
+            onChange={v => updateProfile({ weight: v })}
+            validator={VALID.weight}
+            type="number" placeholder="—"
+          />
         </div>
-        <div style={{
-          marginTop: 8, background: C.bgCard, border: `1px solid ${C.border}`,
-          clipPath: smallAngleClip, padding: '12px 14px',
-          fontFamily: F.mono, fontSize: 9, color: C.textFaint,
-          letterSpacing: '0.15em', textTransform: 'uppercase', lineHeight: 1.6,
-        }}>▸ data stays on device. nothing sent to servers.</div>
       </div>
       <OnbFooter onNext={onNext} onBack={onBack} nextDisabled={!valid} />
     </>
   );
 }
 
-function StepExperience({ profile, updateProfile, onNext, onBack, startingOVR }) {
+function StepBriefing({ profile, onNext, onBack }) {
   return (
     <>
-      <OnbHeader subtitle="step 03 · calibration" title="Training History" />
-      <p style={{ padding: '0 22px', marginTop: 14, fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>
-        От этого зависят твои стартовые статы. Будь честен — иначе игра не будет иметь смысла.
-      </p>
-      <div style={{ padding: '24px 18px 0', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {EXPERIENCE_LEVELS.map((lvl, i) => {
-          const selected = profile.experienceLevel === i;
-          return (
-            <button key={i} onClick={() => updateProfile({ experienceLevel: i })} style={{
-              background: selected ? C.yellowSoft : C.bgCard,
-              border: `1px solid ${selected ? C.yellow : C.border}`,
-              clipPath: smallAngleClip, padding: '12px 16px',
-              display: 'flex', alignItems: 'center', gap: 14,
-              cursor: 'pointer', transition: 'all 0.3s',
-              boxShadow: selected ? `0 0 12px ${C.yellowGlow}` : 'none',
-              color: 'inherit', textAlign: 'left',
-            }}>
-              <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 700, color: selected ? C.yellow : C.textDim, letterSpacing: '0.1em', minWidth: 110 }}>{lvl.code}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: F.mono, fontSize: 10, color: C.text, letterSpacing: '0.15em', textTransform: 'uppercase' }}>{lvl.label}</div>
-                <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, marginTop: 2, letterSpacing: '0.05em' }}>{lvl.desc}</div>
-              </div>
-              {selected && (
-                <div style={{ width: 18, height: 18, borderRadius: '50%', background: C.yellow, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Check size={10} strokeWidth={3} color={C.bg} />
-                </div>
-              )}
-            </button>
-          );
-        })}
-        {startingOVR > 0 && (
-          <div style={{
-            marginTop: 16, background: C.bgCard, border: `1px solid ${C.cyanBorder}`,
-            clipPath: smallAngleClip, padding: '14px 16px',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          }}>
-            <div>
-              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.cyan, letterSpacing: '0.2em', textTransform: 'uppercase' }}>▸ projected ovr</div>
-              <div style={{ fontFamily: F.body, fontSize: 11, color: C.textDim, marginTop: 4 }}>your starting tier</div>
-            </div>
-            <div style={{ fontFamily: F.display, fontSize: 32, fontWeight: 700, color: C.cyan, textShadow: `0 0 14px ${C.cyan}80` }}>{startingOVR}</div>
-          </div>
-        )}
+      <OnbHeader subtitle="шаг 03 · брифинг" title="Что Дальше" accent={C.teal} />
+      <div style={{ padding: '24px 22px 0', flex: 1, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <p style={{ fontFamily: F.body, fontSize: 14, color: C.text, lineHeight: 1.7 }}>
+          {profile.name}, добро пожаловать в первую главу.
+        </p>
+        <div style={{ background: C.bgCard, border: \`1px solid \${C.tealBorder}\`, clipPath: smallAngleClip, padding: '16px 18px' }}>
+          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.teal, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 10 }}>▸ День 1 · Калибровочное Испытание</div>
+          <p style={{ fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.6, margin: 0 }}>
+            Прежде чем игра начнётся всерьёз, нужно понять, кто ты сейчас. День 1 — единственный в своём роде. 8 миссий: купить ленту-сантиметр, замерить тело, оценить процент жира, сделать фото, сдать тесты на отжимания и планку.
+          </p>
+          <p style={{ fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.6, margin: '12px 0 0' }}>
+            После этого игра рассчитает твой стартовый OVR и решит — нужен тебе план набора массы или рекомпозиции (одновременно жечь жир и растить мышцы).
+          </p>
+        </div>
+        <div style={{ background: C.bgCard, border: \`1px solid \${C.border}\`, clipPath: smallAngleClip, padding: '16px 18px' }}>
+          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textDim, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 10 }}>▸ Что тебе понадобится</div>
+          <ul style={{ fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
+            <li>Сантиметровая лента (швейная, 150 см)</li>
+            <li>Весы напольные</li>
+            <li>5-10 минут утром</li>
+            <li>Место где можно отжаться и сделать планку</li>
+          </ul>
+        </div>
       </div>
-      <OnbFooter onNext={onNext} onBack={onBack} nextDisabled={profile.experienceLevel === null} />
+      <OnbFooter onNext={onNext} onBack={onBack} nextLabel="▸ принимаю вызов" />
     </>
   );
 }
 
-function StepGoal({ profile, updateProfile, onNext, onBack, startingOVR, startingStats }) {
-  const minTarget = startingOVR + 8;
-  const maxTarget = Math.min(90, startingOVR + 30);
-  const defaultTarget = startingOVR + 15;
-
-  useEffect(() => {
-    if (profile.ovrTarget === null) updateProfile({ ovrTarget: defaultTarget });
-    // eslint-disable-next-line
-  }, []);
-
-  const target = profile.ovrTarget || defaultTarget;
-  const delta = target - startingOVR;
-  const goals = startingStats ? calibrateGoals(startingStats, target) : null;
-
-  const difficulty = delta <= 12 ? { label: 'realistic', color: C.success, desc: 'достижимо при дисциплине' }
-    : delta <= 20 ? { label: 'ambitious', color: C.yellow, desc: 'требует фокуса и постоянства' }
-    : { label: 'extreme', color: C.magenta, desc: 'для тех кто реально готов выложиться' };
-
-  return (
-    <>
-      <OnbHeader subtitle="step 04 · commitment" title="Set Your Goal" />
-      <p style={{ padding: '0 22px', marginTop: 14, fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>
-        Каким OVR ты хочешь стать через 84 дня. Это не просто число — это контракт с собой.
-      </p>
-      <div style={{ padding: '24px 18px 0', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '20px 18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.18em', textTransform: 'uppercase' }}>now</div>
-              <div style={{ fontFamily: F.display, fontSize: 44, fontWeight: 700, color: C.textDim, marginTop: 6, lineHeight: 1 }}>{startingOVR}</div>
-              <div style={{ fontFamily: F.display, fontSize: 9, color: C.textFaint, letterSpacing: '0.25em', marginTop: 4 }}>{calcTier(startingOVR).name.toUpperCase()}</div>
-            </div>
-            <ArrowRight size={24} color={C.textFaint} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-            <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontFamily: F.mono, fontSize: 9, color: difficulty.color, letterSpacing: '0.18em', textTransform: 'uppercase' }}>day 084</div>
-              <div style={{ fontFamily: F.display, fontSize: 44, fontWeight: 700, color: difficulty.color, marginTop: 6, lineHeight: 1, textShadow: `0 0 18px ${difficulty.color}80` }}>{target}</div>
-              <div style={{ fontFamily: F.display, fontSize: 9, color: C.textFaint, letterSpacing: '0.25em', marginTop: 4 }}>{calcTier(target).name.toUpperCase()}</div>
-            </div>
-          </div>
-          <div style={{ marginTop: 24 }}>
-            <input type="range" min={minTarget} max={maxTarget} value={target} onChange={e => updateProfile({ ovrTarget: Number(e.target.value) })} style={{ width: '100%', accentColor: difficulty.color, height: 4 }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              <span>+{minTarget - startingOVR}</span>
-              <span>+{maxTarget - startingOVR}</span>
-            </div>
-          </div>
-        </div>
-        <div style={{
-          background: `${difficulty.color}11`, border: `1px solid ${difficulty.color}55`,
-          clipPath: smallAngleClip, padding: '12px 16px',
-          display: 'flex', alignItems: 'center', gap: 14,
-        }}>
-          <div style={{
-            fontFamily: F.display, fontSize: 11, fontWeight: 700,
-            color: difficulty.color, letterSpacing: '0.22em', textTransform: 'uppercase',
-            padding: '4px 10px', border: `1px solid ${difficulty.color}`, clipPath: smallAngleClip,
-          }}>{difficulty.label}</div>
-          <div style={{ fontFamily: F.body, fontSize: 12, color: C.textDim, flex: 1 }}>{difficulty.desc}</div>
-        </div>
-        {goals && (
-          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '14px 16px' }}>
-            <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 }}>▸ stat goals</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 14px' }}>
-              {STAT_CODES.map(code => (
-                <div key={code} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span style={{ fontFamily: F.display, fontSize: 10, fontWeight: 700, color: C.textDim, letterSpacing: '0.15em', minWidth: 26 }}>{code}</span>
-                  <span style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint }}>{startingStats[code]}</span>
-                  <span style={{ color: C.textFaint, fontSize: 10 }}>→</span>
-                  <span style={{ fontFamily: F.mono, fontSize: 11, color: C.cyan, fontWeight: 700 }}>{goals[code]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-      <OnbFooter onNext={onNext} onBack={onBack} nextLabel="▸ commit" />
-    </>
-  );
-}
-
-function StepLetter({ profile, startingOVR, onComplete, onBack }) {
+function StepLetter({ profile, onComplete, onBack }) {
   const [revealed, setRevealed] = useState(false);
   const [typedLines, setTypedLines] = useState(0);
 
-  const projectedWeight = useMemo(() => {
-    const w = Number(profile.weight);
-    const ovrDelta = profile.ovrTarget - startingOVR;
-    const weightGain = ovrDelta <= 12 ? 3 : ovrDelta <= 20 ? 5 : 7;
-    return Math.round((w + weightGain) * 10) / 10;
-  }, [profile.weight, profile.ovrTarget, startingOVR]);
-
   const lines = useMemo(() => [
-    `Прошло 84 дня. Я смотрю на тебя из будущего.`,
-    ``,
-    `Я на ${projectedWeight} кг. Я был на ${profile.weight} кг.`,
-    `Я ${calcTier(profile.ovrTarget).name.toUpperCase()} ${profile.ovrTarget}. Я был ${calcTier(startingOVR).name.toUpperCase()} ${startingOVR}.`,
-    ``,
-    `Я не сорвался, потому что ты не сорвался.`,
-    `Я не сдался, потому что ты не сдался.`,
-    ``,
-    `${profile.name || 'Агент'}, начни.`,
-  ], [profile.name, profile.weight, projectedWeight, profile.ovrTarget, startingOVR]);
+    \`Прошло 84 дня. Я смотрю на тебя из будущего.\`,
+    \`\`,
+    \`Я не знаю пока, какие у меня будут цифры —\`,
+    \`это решат твои тесты в Дне 1.\`,
+    \`\`,
+    \`Но я знаю одно.\`,
+    \`Я не сорвался, потому что ты не сорвался.\`,
+    \`Я не сдался, потому что ты не сдался.\`,
+    \`\`,
+    \`\${profile.name}, начни.\`,
+  ], [profile.name]);
 
   useEffect(() => { setTimeout(() => setRevealed(true), 200); }, []);
   useEffect(() => {
@@ -1389,64 +1864,62 @@ function StepLetter({ profile, startingOVR, onComplete, onBack }) {
 
   return (
     <>
-      <OnbHeader subtitle="step 06 · cutscene" title="A Letter from You" accent={C.cyan} />
+      <OnbHeader subtitle="шаг 05 · письмо" title="От Тебя · Тебе" accent={C.teal} />
       <div style={{ padding: '32px 22px 0', flex: 1 }}>
         <div style={{
-          background: '#000', border: `1px solid ${C.cyanBorder}`,
+          background: '#000', border: \`1px solid \${C.tealBorder}\`,
           clipPath: angleClip, padding: '28px 24px', minHeight: 320,
-          boxShadow: `0 0 28px rgba(0, 229, 255, 0.15)`,
+          boxShadow: \`0 0 28px rgba(0, 217, 192, 0.15)\`,
         }}>
-          <div style={{ fontFamily: F.mono, fontSize: 9, color: C.cyan, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 18, opacity: revealed ? 1 : 0, transition: 'opacity 0.5s' }}>
-            ▸ incoming :: future_self · 84d
+          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.teal, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 18, opacity: revealed ? 1 : 0, transition: 'opacity 0.5s' }}>
+            ▸ входящее · от тебя из будущего · 84д
           </div>
           {lines.map((line, i) => (
             <div key={i} style={{
-              fontFamily: F.body, fontSize: 14, color: C.text, lineHeight: 1.8,
+              fontFamily: F.body, fontSize: 15, color: C.text, lineHeight: 1.7,
               opacity: i < typedLines ? 1 : 0,
               transform: i < typedLines ? 'translateY(0)' : 'translateY(4px)',
               transition: 'all 0.5s ease',
               minHeight: line === '' ? 8 : 'auto',
               fontStyle: line === '' ? 'normal' : 'italic',
-              letterSpacing: '0.02em',
+              letterSpacing: '0.01em',
             }}>{line || '\u00A0'}</div>
           ))}
           {!allTyped && (
             <div style={{
-              display: 'inline-block', width: 8, height: 16,
-              background: C.cyan, marginTop: 4,
+              display: 'inline-block', width: 8, height: 18,
+              background: C.teal, marginTop: 4,
               animation: 'blink 0.8s infinite',
             }} />
           )}
         </div>
-        <div style={{
-          marginTop: 16, fontFamily: F.mono, fontSize: 9, color: C.textFaint,
-          letterSpacing: '0.18em', textTransform: 'uppercase', textAlign: 'center',
-          opacity: allTyped ? 1 : 0, transition: 'opacity 0.6s ease',
-        }}>▸ message persists in your archive</div>
       </div>
-      <div style={{ padding: '20px 18px 32px', borderTop: `1px solid ${C.border}`, background: C.bg, display: 'flex', gap: 8 }}>
+      <div style={{
+        padding: '20px 18px',
+        paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
+        borderTop: \`1px solid \${C.border}\`, background: C.bg, display: 'flex', gap: 8,
+      }}>
         <button onClick={onBack} style={{
-          background: 'transparent', border: `1px solid ${C.border}`,
+          background: 'transparent', border: \`1px solid \${C.border}\`,
           color: C.textDim, padding: '14px 18px',
-          fontFamily: F.display, fontSize: 11, fontWeight: 700,
-          letterSpacing: '0.22em', textTransform: 'uppercase',
+          fontFamily: F.display, fontSize: 14, fontWeight: 400,
+          letterSpacing: '0.16em', textTransform: 'uppercase',
           cursor: 'pointer', clipPath: smallAngleClip,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <ArrowLeft size={14} strokeWidth={2} />
-        </button>
+          minHeight: 48,
+        }}>← НАЗАД</button>
         <button onClick={onComplete} disabled={!allTyped} style={{
           flex: 1,
-          background: allTyped ? C.yellow : C.surface,
+          background: allTyped ? C.pink : C.surface,
           color: allTyped ? C.bg : C.textFaint,
           border: 'none', padding: '14px',
-          fontFamily: F.display, fontSize: 12, fontWeight: 700,
-          letterSpacing: '0.22em', textTransform: 'uppercase',
+          fontFamily: F.display, fontSize: 16, fontWeight: 400,
+          letterSpacing: '0.18em', textTransform: 'uppercase',
           cursor: allTyped ? 'pointer' : 'not-allowed',
           clipPath: smallAngleClip,
-          boxShadow: allTyped ? `0 0 16px ${C.yellowGlow}` : 'none',
-          transition: 'all 0.3s',
-        }}>{allTyped ? '▸ begin campaign' : '◌ reading...'}</button>
+          boxShadow: allTyped ? \`0 0 18px \${C.pinkGlow}\` : 'none',
+          transition: 'all 0.3s', minHeight: 48,
+        }}>{allTyped ? '▸ Начать игру' : '◌ Читаем...'}</button>
       </div>
     </>
   );
@@ -1462,7 +1935,7 @@ function TodayScreen({ state, currentDay, missions, onMissionClick }) {
   const xpToNext = 200;
   const pct = Math.min(100, (totalXP / xpToNext) * 100);
   const completedCount = missions.filter(m => m.done).length;
-  const chapter = getChapterByDay(currentDay);
+  const chapter = getChapterByDay(currentDay, state?.mode);
   const isBossDay = BOSS_DAYS.includes(currentDay);
 
   const ovr = calcOVR(state.stats);
@@ -1485,19 +1958,19 @@ function TodayScreen({ state, currentDay, missions, onMissionClick }) {
   }, [totalXP, animXP]);
 
   const briefingText = useMemo(() => {
-    if (currentDay === 1) return 'Старт кампании. Сегодня замеряем стартовые точки — без них прогресс не виден. Тренировки начнутся со 2-го дня.';
-    if (isBossDay) return `Конец главы ${chapter.romanNum}. Boss day — переснимаем фото, перемеряем вес, тестируем рекорды. Сравниваем с прошлым замером.`;
+    if (currentDay === 1) return 'День 1 — калибровочное испытание. 8 миссий: купить ленту, замеры тела, оценка процента жира, фото, тесты на отжимания и планку. После этого игра решит твой стартовый OVR и план — масса или рекомпозиция.';
+    if (isBossDay) return `Конец главы ${chapter.romanNum}. Испытание-босс — переснимаем фото, перемеряем вес, тестируем рекорды.`;
     const dow = (currentDay - 1) % 7;
     if (dow === 0) return 'Понедельник. Старт недельного цикла. Сегодня основная тренировка — выложись по максимуму.';
     if (dow === 6) return 'Воскресенье. Лёгкое кардио и восстановление.';
-    return `День ${currentDay}. Глава ${chapter.romanNum} — ${chapter.display}. Прогрессивная перегрузка работает только с дисциплиной.`;
+    return `День ${currentDay}. Глава ${chapter.romanNum} — ${chapter.display}.`;
   }, [currentDay, chapter, isBossDay]);
 
   const heroTitle = useMemo(() => {
-    if (currentDay === 1) return 'The Beginning';
-    if (isBossDay) return `Boss · Ch. ${chapter.romanNum}`;
+    if (currentDay === 1) return 'Калибровка';
+    if (isBossDay) return `Босс · Гл. ${chapter.romanNum}`;
     const dow = (currentDay - 1) % 7;
-    return ['Reset Day', 'Push Day', 'Pull Day', 'Cardio', 'Leg Day', 'Volume', 'Recovery'][dow];
+    return ['Отдых', 'Жим', 'Тяга', 'Кардио', 'Ноги', 'Объём', 'Восстановление'][dow];
   }, [currentDay, chapter, isBossDay]);
 
   return (
@@ -1515,38 +1988,39 @@ function TodayScreen({ state, currentDay, missions, onMissionClick }) {
           transition: 'all 0.5s',
         }}>
           <div style={{ background: C.bgCard, clipPath: angleClip, padding: '20px 22px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 8, left: 14, fontFamily: F.mono, fontSize: 8, letterSpacing: '0.25em', color: tier.color, textTransform: 'uppercase' }}>▸ player_card</div>
-            <div style={{ position: 'absolute', top: 8, right: 14, fontFamily: F.mono, fontSize: 8, letterSpacing: '0.25em', color: C.textFaint, textTransform: 'uppercase' }}>{tier.name}_tier ◂</div>
+            <div style={{ position: 'absolute', top: 8, left: 14, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.25em', color: tier.color, textTransform: 'uppercase' }}>▸ КАРТА ГЕРОЯ</div>
+            <div style={{ position: 'absolute', top: 8, right: 14, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.25em', color: C.textFaint, textTransform: 'uppercase' }}>{tier.display} ◂</div>
 
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginTop: 14, marginBottom: 18 }}>
               <div>
-                <div style={{ fontFamily: F.display, fontSize: 64, fontWeight: 700, color: tier.color, lineHeight: 0.9, letterSpacing: '-0.04em', textShadow: `0 0 18px ${tier.glow}`, transition: 'all 0.4s' }}>{ovr}</div>
-                <div style={{ fontFamily: F.display, fontSize: 11, fontWeight: 500, color: tier.color, letterSpacing: '0.3em', marginTop: 2 }}>OVR</div>
-                <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '0.18em', marginTop: 14 }}>HYP</div>
-                <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textDim, letterSpacing: '0.15em', marginTop: 2, textTransform: 'uppercase' }}>{(state.profile?.name || 'agent').toLowerCase().slice(0, 14)}</div>
+                <div style={{ fontFamily: F.display, fontSize: 72, fontWeight: 400, color: tier.color, lineHeight: 0.85, letterSpacing: '-0.02em', textShadow: `0 0 22px ${tier.glow}`, transition: 'all 0.4s' }}>{ovr === null ? '?' : ovr}</div>
+                <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 400, color: tier.color, letterSpacing: '0.3em', marginTop: 2 }}>OVR</div>
+                <div style={{ fontFamily: F.display, fontSize: 18, fontWeight: 400, color: C.text, letterSpacing: '0.18em', marginTop: 14 }}>{(state.profile?.name || 'герой').toUpperCase()}</div>
+                <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textDim, letterSpacing: '0.15em', marginTop: 2, textTransform: 'uppercase' }}>гипертрофия</div>
               </div>
               <div style={{
-                width: 78, height: 78,
-                background: `radial-gradient(circle at 30% 30%, ${C.yellowSoft}, transparent 70%), ${C.surface}`,
+                width: 82, height: 82,
+                background: `radial-gradient(circle at 30% 30%, ${tier.color}33, transparent 70%), ${C.surface}`,
                 border: `1px solid ${tier.color}55`,
                 clipPath: smallAngleClip,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: F.display, fontSize: 38, fontWeight: 700,
+                fontFamily: F.display, fontSize: 42, fontWeight: 400,
                 color: tier.color, textShadow: `0 0 14px ${tier.glow}`,
-              }}>{(state.profile?.name || "М").charAt(0).toUpperCase()}</div>
+              }}>{(state.profile?.name || "Г").charAt(0).toUpperCase()}</div>
             </div>
 
             <div style={{ height: 1, background: `linear-gradient(to right, transparent, ${tier.color}55, transparent)`, marginBottom: 16 }} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px 22px' }}>
               {STAT_CODES.map(code => {
-                const value = state.stats[code];
+                const value = state.stats?.[code];
+                const isNull = value === undefined || value === null;
                 return (
                   <div key={code} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontFamily: F.display, fontSize: 11, fontWeight: 700, color: C.textDim, letterSpacing: '0.18em', minWidth: 28 }}>{code}</span>
-                    <span style={{ fontFamily: F.mono, fontSize: 18, fontWeight: 700, color: C.text }}>{Math.round(value)}</span>
+                    <span style={{ fontFamily: F.display, fontSize: 14, fontWeight: 400, color: C.textDim, letterSpacing: '0.18em', minWidth: 32 }}>{code}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 18, fontWeight: 700, color: isNull ? C.textFaint : C.text }}>{isNull ? '—' : Math.round(value)}</span>
                     <div style={{ flex: 1, height: 2, background: C.surface, position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${value}%`, background: value >= 60 ? C.yellow : (value >= 40 ? C.cyan : C.textFaint), transition: 'width 0.6s' }} />
+                      {!isNull && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${value}%`, background: value >= 60 ? C.gold : (value >= 40 ? C.teal : C.bronze), transition: 'width 0.6s' }} />}
                     </div>
                   </div>
                 );
@@ -1603,16 +2077,16 @@ function TodayScreen({ state, currentDay, missions, onMissionClick }) {
             clipPath: smallAngleClip,
             boxShadow: m.special && !m.done ? `0 0 12px rgba(255, 214, 10, 0.18)` : 'none',
           }}>
-            <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 700, color: m.done ? C.success : (m.special ? C.yellow : C.textDim), letterSpacing: '0.1em', width: 24, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {m.done ? <Check size={16} strokeWidth={3} /> : `[${m.num}]`}
+            <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 400, color: m.done ? C.success : (m.special ? C.pink : C.textDim), letterSpacing: '0.06em', width: 28, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {m.done ? <Check size={18} strokeWidth={3} /> : `[${m.num}]`}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 600, color: m.done ? C.textFaint : C.text, letterSpacing: '0.06em', textDecoration: m.done ? 'line-through' : 'none' }}>{m.code}</div>
-              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.12em', marginTop: 3, textTransform: 'uppercase' }}>{m.desc}</div>
+              <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 400, color: m.done ? C.textFaint : C.text, letterSpacing: '0.02em', textDecoration: m.done ? 'line-through' : 'none', textTransform: 'uppercase' }}>{m.title || m.code}</div>
+              <div style={{ fontFamily: F.body, fontSize: 11, color: C.textFaint, letterSpacing: '0.02em', marginTop: 3, lineHeight: 1.4 }}>{m.desc?.length > 60 ? m.desc.slice(0, 60) + '...' : m.desc}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-              <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 700, color: m.done ? C.success : C.yellow }}>+{m.xp}</span>
-              <span style={{ fontFamily: F.display, fontSize: 9, color: C.textFaint, letterSpacing: '0.18em', fontWeight: 600 }}>→{m.stat}</span>
+              <span style={{ fontFamily: F.mono, fontSize: 14, fontWeight: 700, color: m.done ? C.success : C.pink }}>+{m.xp}</span>
+              <span style={{ fontFamily: F.display, fontSize: 10, color: C.textFaint, letterSpacing: '0.18em', fontWeight: 400 }}>→{m.stat}</span>
             </div>
           </button>
         ))}
@@ -1653,8 +2127,9 @@ function AgentScreen({ state, currentDay, onReset }) {
 
   const ovr = calcOVR(state.stats);
   const tier = calcTier(ovr);
-  const goals = state.goals || Object.fromEntries(STAT_CODES.map(c => [c, state.stats[c] + 20]));
-  const radarData = STAT_CODES.map(code => ({ stat: code, current: state.stats[code], goal: goals[code] }));
+  const hasStats = state.stats !== null && state.stats !== undefined;
+  const goals = state.goals || (hasStats ? Object.fromEntries(STAT_CODES.map(c => [c, state.stats[c] + 20])) : Object.fromEntries(STAT_CODES.map(c => [c, 60])));
+  const radarData = STAT_CODES.map(code => ({ stat: code, current: hasStats ? state.stats[code] : 0, goal: goals[code] }));
 
   const completedDays = Object.values(state.daysData).filter(d => d.completed).length;
   const completionPct = Math.round((currentDay / 84) * 100 * 10) / 10;
@@ -1685,68 +2160,68 @@ function AgentScreen({ state, currentDay, onReset }) {
           boxShadow: `0 0 28px ${tier.glow}`,
         }}>
           <div style={{ background: C.bgCard, clipPath: angleClip, padding: '20px 22px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 8, left: 14, fontFamily: F.mono, fontSize: 8, letterSpacing: '0.25em', color: tier.color, textTransform: 'uppercase' }}>▸ agent_file :: active</div>
-            <div style={{ position: 'absolute', top: 8, right: 14, fontFamily: F.mono, fontSize: 8, letterSpacing: '0.25em', color: C.textFaint, textTransform: 'uppercase' }}>id_0001 ◂</div>
+            <div style={{ position: 'absolute', top: 8, left: 14, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.25em', color: tier.color, textTransform: 'uppercase' }}>▸ ГЕРОЙ · АКТИВЕН</div>
+            <div style={{ position: 'absolute', top: 8, right: 14, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.25em', color: C.textFaint, textTransform: 'uppercase' }}>ID 0001 ◂</div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 16, marginBottom: 8 }}>
               <div style={{
-                width: 92, height: 92,
-                background: `radial-gradient(circle at 30% 30%, ${tier.color}22, transparent 70%), ${C.surface}`,
+                width: 96, height: 96,
+                background: `radial-gradient(circle at 30% 30%, ${tier.color}33, transparent 70%), ${C.surface}`,
                 border: `1px solid ${tier.color}55`,
                 clipPath: smallAngleClip,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: F.display, fontSize: 46, fontWeight: 700,
-                color: tier.color, textShadow: `0 0 16px ${tier.glow}`,
+                fontFamily: F.display, fontSize: 50, fontWeight: 400,
+                color: tier.color, textShadow: `0 0 18px ${tier.glow}`,
                 flexShrink: 0,
-              }}>{(state.profile?.name || "М").charAt(0).toUpperCase()}</div>
+              }}>{(state.profile?.name || "Г").charAt(0).toUpperCase()}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <div style={{ fontFamily: F.display, fontSize: 56, fontWeight: 700, color: tier.color, lineHeight: 0.9, letterSpacing: '-0.04em', textShadow: `0 0 16px ${tier.glow}` }}>{ovr}</div>
-                  <div style={{ fontFamily: F.display, fontSize: 11, fontWeight: 500, color: tier.color, letterSpacing: '0.3em' }}>OVR</div>
+                  <div style={{ fontFamily: F.display, fontSize: 64, fontWeight: 400, color: tier.color, lineHeight: 0.85, letterSpacing: '-0.02em', textShadow: `0 0 18px ${tier.glow}` }}>{ovr === null ? '?' : ovr}</div>
+                  <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 400, color: tier.color, letterSpacing: '0.3em' }}>OVR</div>
                 </div>
-                <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: '0.12em', marginTop: 6 }}>{(state.profile?.name || 'AGENT').toUpperCase()}</div>
-                <div style={{ display: 'inline-block', marginTop: 8, fontFamily: F.mono, fontSize: 9, color: tier.color, letterSpacing: '0.18em', textTransform: 'uppercase', border: `1px solid ${tier.color}55`, padding: '3px 8px' }}>tier · {tier.name}</div>
+                <div style={{ fontFamily: F.display, fontSize: 18, fontWeight: 400, color: C.text, letterSpacing: '0.1em', marginTop: 6 }}>{(state.profile?.name || 'ГЕРОЙ').toUpperCase()}</div>
+                <div style={{ display: 'inline-block', marginTop: 8, fontFamily: F.mono, fontSize: 10, color: tier.color, letterSpacing: '0.18em', textTransform: 'uppercase', border: `1px solid ${tier.color}55`, padding: '4px 10px' }}>{tier.display}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <SectionHeader sub="lifetime">▸ career_data</SectionHeader>
+      <SectionHeader sub="всё время">▸ ИСТОРИЯ ГЕРОЯ</SectionHeader>
       <div style={{ padding: '0 18px', opacity: revealed ? 1 : 0, transition: 'opacity 0.6s ease 0.25s' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
-            { label: 'TOTAL_XP', value: state.totalXP.toString().padStart(6, '0'), color: C.yellow },
-            { label: 'DAY_OF_84', value: String(currentDay).padStart(3, '0'), color: C.cyan },
-            { label: 'DAYS_DONE', value: String(completedDays).padStart(3, '0'), color: C.success },
-            { label: 'ACHIEVEMENTS', value: `${unlockedCount}/8`, color: C.text },
+            { label: 'ВСЕГО XP', value: state.totalXP.toString().padStart(6, '0'), color: C.pink },
+            { label: 'ДЕНЬ ИЗ 84', value: String(currentDay).padStart(3, '0'), color: C.teal },
+            { label: 'ВЫПОЛНЕНО', value: String(completedDays).padStart(3, '0'), color: C.success },
+            { label: 'ДОСТИЖЕНИЯ', value: `${unlockedCount}/8`, color: C.text },
           ].map(s => (
-            <div key={s.label} style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '12px 14px' }}>
-              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.18em', textTransform: 'uppercase' }}>{s.label}</div>
-              <div style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, color: s.color, marginTop: 4 }}>{s.value}</div>
+            <div key={s.label} style={{ background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '14px 16px' }}>
+              <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.15em', textTransform: 'uppercase' }}>{s.label}</div>
+              <div style={{ fontFamily: F.display, fontSize: 26, fontWeight: 400, color: s.color, marginTop: 4 }}>{s.value}</div>
             </div>
           ))}
         </div>
       </div>
 
       <div style={{ marginTop: 32 }}>
-        <SectionHeader sub="6 attrs · current vs goal">▸ attribute_matrix</SectionHeader>
+        <SectionHeader sub="6 характеристик · текущее → цель">▸ ХАРАКТЕРИСТИКИ</SectionHeader>
       </div>
       <div style={{ margin: '0 18px', background: C.bgCard, border: `1px solid ${C.border}`, clipPath: smallAngleClip, padding: '4px 4px 16px', opacity: revealed ? 1 : 0, transition: 'opacity 0.7s ease 0.4s' }}>
         <div style={{ height: 280 }}>
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData} margin={{ top: 20, right: 35, bottom: 10, left: 35 }}>
               <PolarGrid stroke={C.border} strokeWidth={0.5} gridType="polygon" />
-              <PolarAngleAxis dataKey="stat" tick={{ fill: C.yellow, fontFamily: F.display, fontSize: 12, fontWeight: 700, letterSpacing: 2 }} />
-              <Radar name="goal" dataKey="goal" stroke={C.cyan} fill={C.cyan} fillOpacity={0.04} strokeWidth={1} strokeDasharray="3 3" />
-              <Radar name="current" dataKey="current" stroke={C.yellow} fill={C.yellow} fillOpacity={0.22} strokeWidth={2} />
+              <PolarAngleAxis dataKey="stat" tick={{ fill: C.pink, fontFamily: F.display, fontSize: 13, fontWeight: 400, letterSpacing: 2 }} />
+              <Radar name="цель" dataKey="goal" stroke={C.teal} fill={C.teal} fillOpacity={0.04} strokeWidth={1} strokeDasharray="3 3" />
+              <Radar name="сейчас" dataKey="current" stroke={C.pink} fill={C.pink} fillOpacity={0.22} strokeWidth={2} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, fontFamily: F.mono, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 4 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 14, height: 2, background: C.yellow, boxShadow: `0 0 4px ${C.yellowGlow}` }} />
-            <span style={{ color: C.yellow }}>current</span>
+            <span style={{ color: C.pink }}>сейчас</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 14, height: 2, background: 'transparent', borderTop: `1.5px dashed ${C.cyan}` }} />
@@ -1790,18 +2265,18 @@ function AgentScreen({ state, currentDay, onReset }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div>
             <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '0.06em' }}>HYPERTROPHY_v1</div>
-            <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.18em', marginTop: 4, textTransform: 'uppercase' }}>chapter {getChapterByDay(currentDay).romanNum.toLowerCase()} :: {getChapterByDay(currentDay).name}</div>
+            <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.18em', marginTop: 4, textTransform: 'uppercase' }}>chapter {getChapterByDay(currentDay, state?.mode).romanNum.toLowerCase()} :: {getChapterByDay(currentDay, state?.mode).name}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: F.mono, fontSize: 9, color: C.success, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.success }} />
-            in_progress
+            в процессе
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
           {['I', 'II', 'III', 'IV'].map((ch, i) => {
-            const isCurrent = getChapterByDay(currentDay).idx === i;
-            const isPast = getChapterByDay(currentDay).idx > i;
+            const isCurrent = getChapterByDay(currentDay, state?.mode).idx === i;
+            const isPast = getChapterByDay(currentDay, state?.mode).idx > i;
             return (
               <React.Fragment key={ch}>
                 <div style={{
@@ -1895,7 +2370,7 @@ function StoryScreen({ state, currentDay }) {
       <div style={{ padding: '0 18px', opacity: revealed ? 1 : 0, transition: 'opacity 0.7s ease 0.2s' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
           {days.map(d => {
-            const ch = getChapterByDay(d);
+            const ch = getChapterByDay(d, state?.mode);
             const isBoss = BOSS_DAYS.includes(d);
             const isCurrent = d === currentDay;
             const isPast = d < currentDay;
@@ -1932,10 +2407,10 @@ function StoryScreen({ state, currentDay }) {
 
         <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontFamily: F.mono, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           {[
-            { color: C.success, label: 'completed' },
-            { color: C.yellow, label: 'current' },
-            { color: C.borderBright, label: 'partial' },
-            { color: C.magenta, label: '★ boss day' },
+            { color: C.success, label: 'выполнено' },
+            { color: C.pink, label: 'сегодня' },
+            { color: C.borderBright, label: 'частично' },
+            { color: C.pink, label: '★ испытание' },
           ].map(l => (
             <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.textDim }}>
               <div style={{ width: 10, height: 10, background: `${l.color}33`, border: `1px solid ${l.color}` }} />
@@ -1955,8 +2430,8 @@ function StoryScreen({ state, currentDay }) {
           { num: 'III', name: 'Intensity', range: '43-63', desc: 'Heavy weights. 5x5. Plateau-breakers.' },
           { num: 'IV', name: 'Consolidation', range: '64-84', desc: 'Peak performance. Final transformation.' },
         ].map((ch, i) => {
-          const isCurrent = getChapterByDay(currentDay).idx === i;
-          const isPast = getChapterByDay(currentDay).idx > i;
+          const isCurrent = getChapterByDay(currentDay, state?.mode).idx === i;
+          const isPast = getChapterByDay(currentDay, state?.mode).idx > i;
           return (
             <div key={ch.num} style={{
               background: isCurrent ? C.yellowSoft : C.bgCard,
@@ -1985,7 +2460,82 @@ function StoryScreen({ state, currentDay }) {
 }
 
 // ============== APP ROOT ==============
-function App() {
+// ============== SAVE TOAST ==============
+// Subscribes to global save events and shows non-intrusive bottom toast.
+function SaveToast() {
+  const [event, setEvent] = useState(null);
+  const [visible, setVisible] = useState(false);
+  const hideTimerRef = useRef(null);
+
+  useEffect(() => {
+    const unsub = subscribeSaveEvents((ev) => {
+      setEvent(ev);
+      setVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      // Errors persist longer so user can read; success fades quickly
+      const duration = ev.ok ? 1800 : 6000;
+      hideTimerRef.current = setTimeout(() => setVisible(false), duration);
+    });
+    return () => {
+      unsub();
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, []);
+
+  if (!event) return null;
+
+  const isError = !event.ok;
+  const accent = isError ? C.danger : C.success;
+  const message = isError
+    ? (event.reason === 'quota'
+        ? '⚠ ХРАНИЛИЩЕ ПЕРЕПОЛНЕНО'
+        : '⚠ НЕ УДАЛОСЬ СОХРАНИТЬ')
+    : `✓ СОХРАНЕНО · ${formatSaveTime(event.savedAt)}`;
+  const detail = isError
+    ? (event.reason === 'quota'
+        ? 'удали часть фото или экспортируй данные'
+        : 'попробуй ещё раз через настройки')
+    : null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      left: '50%',
+      bottom: 'calc(96px + env(safe-area-inset-bottom))',
+      transform: visible ? 'translate(-50%, 0)' : 'translate(-50%, 16px)',
+      opacity: visible ? 1 : 0,
+      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+      pointerEvents: visible ? 'auto' : 'none',
+      zIndex: 250,
+      maxWidth: 'calc(100vw - 36px)',
+    }}>
+      <div style={{
+        background: C.bgCard,
+        border: `1px solid ${accent}`,
+        boxShadow: `0 0 18px ${accent}66, 0 8px 24px rgba(0,0,0,0.5)`,
+        clipPath: smallAngleClip,
+        padding: detail ? '12px 18px' : '10px 18px',
+        display: 'flex', flexDirection: 'column', gap: 4,
+        minWidth: 220, textAlign: 'center',
+      }}>
+        <div style={{
+          fontFamily: F.mono, fontSize: 11, color: accent,
+          letterSpacing: '0.18em', fontWeight: 600,
+          textTransform: 'uppercase',
+        }}>{message}</div>
+        {detail && (
+          <div style={{
+            fontFamily: F.body, fontSize: 11, color: C.textDim,
+            letterSpacing: '0.02em',
+          }}>{detail}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============== APP ROOT ==============
+export default function App() {
   const [view, setView] = useState('today');
   const [state, setState] = useState(getInitialState);
   const [currentDay, setCurrentDay] = useState(() => {
@@ -2008,7 +2558,7 @@ function App() {
   useEffect(() => {
     if (!state) return;
     if (!state.daysData[dayKey]) {
-      const newMissions = generateMissionsForDay(currentDay);
+      const newMissions = generateMissionsForDay(currentDay, state.mode || 'mass');
       setState(s => {
         const newState = {
           ...s,
@@ -2023,11 +2573,27 @@ function App() {
 
   useEffect(() => {
     if (!state) return;
-    const interval = setInterval(() => {
+    const checkDay = () => {
       const newDay = computeCurrentDay(state.startDate);
-      if (newDay !== currentDay) setCurrentDay(newDay);
-    }, 60000);
-    return () => clearInterval(interval);
+      if (newDay !== currentDay) {
+        setCurrentDay(newDay);
+        logSaveEvent('day_rollover', `${currentDay}->${newDay}`);
+      }
+    };
+    // Periodic check (covers case when app stays open across midnight)
+    const interval = setInterval(checkDay, 60000);
+    // Visibility check (covers PWA reopen after hours/days)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') checkDay();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    // Focus check (some iOS scenarios fire focus, not visibilitychange)
+    window.addEventListener('focus', checkDay);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', checkDay);
+    };
   }, [state, currentDay]);
 
   // ===== Render onboarding if no state =====
@@ -2035,7 +2601,6 @@ function App() {
     return (
       <>
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Geist:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap');
           * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
           @keyframes scan { 0% { transform: translateY(-20px); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(100vh); opacity: 0; } }
           @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.3; } }
@@ -2044,6 +2609,7 @@ function App() {
           input[type=number] { -moz-appearance: textfield; }
         `}</style>
         <OnboardingFlow onComplete={handleOnboardingComplete} />
+        <SaveToast />
       </>
     );
   }
@@ -2064,8 +2630,36 @@ function App() {
         m.id === openMissionId ? { ...m, done: true, data, completedAt: new Date().toISOString() } : m
       );
       const xpDelta = mission.xp;
-      const statDelta = mission.xp * XP_TO_STAT_RATIO;
       const allDone = updatedMissions.every(m => m.done);
+
+      let newStats = s.stats;
+      let newGoals = s.goals;
+      let newMode = s.mode;
+
+      // Special: CALIBRATION_COMPLETE triggers stats + mode calculation from Day 1 data
+      if (mission.code === 'CALIBRATION_COMPLETE') {
+        // Collect calibration data from Day 1 missions
+        const findData = (code) => updatedMissions.find(m => m.code === code)?.data;
+        const weight = Number(findData('BASELINE_WEIGHT')?.value || s.profile.weight);
+        const bodyFatLevel = findData('BODY_FAT_ESTIMATE')?.level;
+        const gender = s.profile.gender || 'male';
+        const bfLevels = BODY_FAT_LEVELS[gender] || BODY_FAT_LEVELS.male;
+        const bodyFat = bfLevels.find(l => l.id === bodyFatLevel)?.value || 20;
+        const maxPushups = Number(findData('PUSHUP_TEST')?.value || 0);
+        const plankSec = Number(findData('PLANK_TEST')?.value || 0);
+
+        newStats = calibrateFromDay1(s.profile, { weight, bodyFat, maxPushups, plankSec });
+        newMode = determineCampaignMode(gender, bodyFat);
+        newGoals = calibrateGoals(newStats, newMode);
+      } else if (s.stats !== null) {
+        // Normal stat update only if calibration is done
+        const statDelta = mission.xp * XP_TO_STAT_RATIO;
+        const statKey = mission.stat;
+        if (s.stats[statKey] !== undefined) {
+          newStats = { ...s.stats, [statKey]: Math.max(0, Math.min(99, s.stats[statKey] + statDelta)) };
+        }
+      }
+      // else: stats still null (mid-calibration, before CALIBRATION_COMPLETE) — don't touch
 
       const newState = {
         ...s,
@@ -2073,7 +2667,9 @@ function App() {
           ...s.daysData,
           [dayKey]: { ...day, missions: updatedMissions, xpEarned: day.xpEarned + xpDelta, completed: allDone },
         },
-        stats: { ...s.stats, [mission.stat]: Math.max(0, Math.min(99, s.stats[mission.stat] + statDelta)) },
+        stats: newStats,
+        goals: newGoals,
+        mode: newMode,
         totalXP: s.totalXP + xpDelta,
       };
       saveState(newState);
@@ -2100,16 +2696,15 @@ function App() {
   };
 
   const navItems = [
-    { id: 'today', Icon: Home, label: 'TODAY' },
-    { id: 'story', Icon: MapIcon, label: 'STORY' },
-    { id: 'agent', Icon: User, label: 'AGENT' },
-    { id: 'cfg', Icon: Settings, label: 'CFG' },
+    { id: 'today', Icon: Home, label: 'СЕГОДНЯ' },
+    { id: 'story', Icon: MapIcon, label: 'ПУТЬ' },
+    { id: 'agent', Icon: User, label: 'ГЕРОЙ' },
+    { id: 'cfg', Icon: Settings, label: 'НАСТР' },
   ];
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Geist:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
         @keyframes scan {
           0% { transform: translateY(-20px); opacity: 0; }
@@ -2126,8 +2721,8 @@ function App() {
       `}</style>
 
       <div style={{
-        minHeight: '100vh', background: C.bg,
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
+        minHeight: '100vh', minHeight: '100dvh', background: C.bg,
+        backgroundImage: `linear-gradient(rgba(255,46,99,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,46,99,0.025) 1px, transparent 1px)`,
         backgroundSize: '24px 24px',
         color: C.text, fontFamily: F.body,
         display: 'flex', justifyContent: 'center',
@@ -2135,27 +2730,28 @@ function App() {
       }}>
         <div key={view} style={{
           position: 'absolute', left: 0, right: 0,
-          height: 2, background: `linear-gradient(to bottom, transparent, ${C.yellow}, transparent)`,
+          height: 2, background: `linear-gradient(to bottom, transparent, ${C.pink}, transparent)`,
           animation: 'scan 1.4s ease-out 1', opacity: 0.6,
           pointerEvents: 'none', zIndex: 100,
         }} />
 
         <div style={{
-          width: '100%', maxWidth: 440, minHeight: '100vh',
+          width: '100%', maxWidth: 440, minHeight: '100vh', minHeight: '100dvh',
           background: C.bgPanel, display: 'flex', flexDirection: 'column',
           position: 'relative',
+          paddingTop: 'env(safe-area-inset-top)',
         }}>
           <div style={{
             padding: '14px 18px 0',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            fontFamily: F.mono, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase',
+            fontFamily: F.mono, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.success, animation: 'blink 2s infinite' }} />
-              <span style={{ color: C.success }}>system online</span>
+              <span style={{ color: C.success }}>на связи</span>
             </div>
-            <div style={{ color: C.textFaint }}>hyp_protocol_v1</div>
-            <div style={{ color: C.yellow }}>cycle {String(currentDay).padStart(3, '0')}/084</div>
+            <div style={{ color: C.textFaint }}>гипер.протокол</div>
+            <div style={{ color: C.pink }}>день {String(currentDay).padStart(3, '0')}/084</div>
           </div>
 
           <div key={view} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -2176,7 +2772,8 @@ function App() {
           <nav style={{
             borderTop: `1px solid ${C.border}`, background: C.bg,
             display: 'flex', justifyContent: 'space-around',
-            padding: '14px 0 24px', position: 'relative',
+            padding: '14px 0 calc(14px + env(safe-area-inset-bottom))',
+            position: 'relative',
           }}>
             {navItems.map(({ id, Icon, label }) => {
               const active = view === id;
@@ -2184,21 +2781,22 @@ function App() {
                 <button key={id} onClick={() => setView(id)} style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                   background: 'transparent', border: 'none', cursor: 'pointer',
-                  padding: '4px 14px',
-                  color: active ? C.yellow : C.textFaint,
+                  padding: '6px 14px',
+                  color: active ? C.pink : C.textFaint,
                   fontFamily: F.display, position: 'relative',
                   transition: 'color 0.3s',
+                  minHeight: 56, minWidth: 64,
                 }}>
                   {active && (
                     <div style={{
                       position: 'absolute', top: -14, left: '50%',
                       transform: 'translateX(-50%)',
-                      width: 32, height: 2, background: C.yellow,
-                      boxShadow: `0 0 8px ${C.yellowGlow}`,
+                      width: 32, height: 2, background: C.pink,
+                      boxShadow: `0 0 8px ${C.pinkGlow}`,
                     }} />
                   )}
-                  <Icon size={18} strokeWidth={1.8} />
-                  <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.18em' }}>{label}</span>
+                  <Icon size={20} strokeWidth={1.8} />
+                  <span style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.16em' }}>{label}</span>
                 </button>
               );
             })}
@@ -2213,6 +2811,8 @@ function App() {
           onAbort={handleMissionAbort}
         />
       )}
+
+      <SaveToast />
 
       {showResetConfirm && (
         <div style={{
@@ -2232,10 +2832,10 @@ function App() {
             boxShadow: `0 0 32px rgba(255, 77, 77, 0.4)`,
           }}>
             <div style={{ fontFamily: F.mono, fontSize: 9, color: C.danger, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 12 }}>
-              ⚠ ▸ critical action
+              ⚠ ▸ ВНИМАНИЕ
             </div>
             <h2 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, color: C.text, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Reset Campaign
+              Сбросить кампанию?
             </h2>
             <p style={{ fontFamily: F.body, fontSize: 13, color: C.textDim, lineHeight: 1.6, marginBottom: 24 }}>
               Все данные, фото, метрики, прогресс — будут стёрты. Это действие необратимо.
@@ -2244,17 +2844,19 @@ function App() {
               <button onClick={() => setShowResetConfirm(false)} style={{
                 flex: 1, background: C.surface,
                 border: `1px solid ${C.border}`, color: C.text,
-                padding: '14px', fontFamily: F.display, fontSize: 12, fontWeight: 700,
-                letterSpacing: '0.22em', textTransform: 'uppercase',
+                padding: '16px', fontFamily: F.display, fontSize: 15, fontWeight: 400,
+                letterSpacing: '0.18em', textTransform: 'uppercase',
                 cursor: 'pointer', clipPath: smallAngleClip,
-              }}>cancel</button>
+                minHeight: 52,
+              }}>отмена</button>
               <button onClick={confirmReset} style={{
                 flex: 1, background: C.danger, border: 'none', color: '#fff',
-                padding: '14px', fontFamily: F.display, fontSize: 12, fontWeight: 700,
-                letterSpacing: '0.22em', textTransform: 'uppercase',
+                padding: '16px', fontFamily: F.display, fontSize: 15, fontWeight: 400,
+                letterSpacing: '0.18em', textTransform: 'uppercase',
                 cursor: 'pointer', clipPath: smallAngleClip,
-                boxShadow: `0 0 16px rgba(255, 77, 77, 0.5)`,
-              }}>▸ confirm reset</button>
+                boxShadow: `0 0 16px rgba(255, 71, 87, 0.5)`,
+                minHeight: 52,
+              }}>▸ сбросить</button>
             </div>
           </div>
         </div>
@@ -2262,7 +2864,3 @@ function App() {
     </>
   );
 }
-
-// ============== MOUNT ==============
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(App));

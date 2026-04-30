@@ -1,12 +1,13 @@
 {
-  "name": "HYP_PROTOCOL",
-  "short_name": "HYP",
-  "description": "Your life. Played. 84-day hypertrophy campaign.",
+  "name": "ГИПЕР_ПРОТОКОЛ",
+  "short_name": "ГИПЕР",
+  "description": "Твоя жизнь. Сыграна. 84-дневная RPG-кампания по гипертрофии.",
+  "lang": "ru",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#050608",
-  "theme_color": "#050608",
+  "background_color": "#0F0B1A",
+  "theme_color": "#0F0B1A",
   "icons": [
     {
       "src": "./icon.svg",
