@@ -32,3 +32,18 @@
   При переносе на этапе 3.4 `MissionDetail` теперь принимает `profile` как
   явный prop, а `App` (этап 3.7) будет передавать `state.profile` сюда. Это
   не «фикс бага», а минимально необходимое изменение для миграции на модули.
+
+- [x] **`emitSaveEvent` вызывался синхронно из updater-функции `setState`.**
+  Скрытый баг в оригинале: `App.handleMissionComplete` и `App.useEffect`
+  для генерации миссий вызывают `saveState(newState)` внутри callback'а
+  `setState(s => { ... saveState; return newState })`. `saveState` синхронно
+  эмитит событие → `SaveToast` синхронно делает `setState`. Это nested
+  setState, который React 18 + StrictMode флагает как «Cannot update a
+  component (SaveToast) while rendering a different component (App)».
+  В оригинале StrictMode не использовался, поэтому warning не показывался.
+  Минимальный фикс на этапе миграции: `emitSaveEvent` теперь оборачивает
+  forEach в `queueMicrotask`. Поведение не меняется — тост всё равно
+  появляется через миллисекунды после save. После миграции стоит
+  отдельным коммитом перенести `saveState` из updater-callback'а наружу
+  (вызывать в `useEffect` после `setState`), но это уже архитектурное
+  изменение, не требующееся для модульной сборки.

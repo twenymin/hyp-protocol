@@ -65,7 +65,16 @@ export const subscribeSaveEvents = (fn) => {
   return () => saveListeners.delete(fn);
 };
 export const emitSaveEvent = (event) => {
-  saveListeners.forEach(fn => { try { fn(event); } catch (e) {} });
+  // Deferred to a microtask so subscribers' setState calls do not run
+  // synchronously inside another component's render or updater function.
+  // game.js called saveState() inside `setState(s => { saveState(...); ... })`
+  // and got away with it because the original was not in StrictMode; under
+  // React 18 + StrictMode this surfaces as a "Cannot update a component
+  // while rendering a different component" warning. The microtask defers
+  // emit until React has finished the current commit.
+  queueMicrotask(() => {
+    saveListeners.forEach(fn => { try { fn(event); } catch (e) {} });
+  });
 };
 
 export const saveState = (state) => {
