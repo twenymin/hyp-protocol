@@ -1,118 +1,84 @@
-// Smoke test for Stage 3.3 — switcher between all 9 input components
-// with mock missions and per-component local state. Will be replaced
-// by the real App in Stage 3.7.
+// Smoke test for Stage 3.4 — list of Day 1 missions; clicking opens
+// MissionDetail with the real mission shape from generateMissionsForDay.
+// Will be replaced by the real App in Stage 3.7.
 import { useState } from 'react'
-import { C, F } from './lib/tokens.js'
+import { C, F, smallAngleClip } from './lib/tokens.js'
+import { generateMissionsForDay } from './lib/missions.js'
 import SectionHeader from './components/SectionHeader.jsx'
-import WorkoutInput from './components/inputs/WorkoutInput.jsx'
-import CardioInput from './components/inputs/CardioInput.jsx'
-import MetricInput from './components/inputs/MetricInput.jsx'
-import MetricsInput from './components/inputs/MetricsInput.jsx'
-import PhotoInput from './components/inputs/PhotoInput.jsx'
-import CheckboxInput from './components/inputs/CheckboxInput.jsx'
-import TextInput from './components/inputs/TextInput.jsx'
-import BodyFatInput from './components/inputs/BodyFatInput.jsx'
-import TimerInput from './components/inputs/TimerInput.jsx'
+import MissionDetail from './components/MissionDetail.jsx'
 
-const MOCKS = {
-  workout: {
-    component: WorkoutInput,
-    mission: {},
-    initialData: { exercises: [
-      { name: 'Жим лёжа', sets: [{ weight: '60', reps: '10' }, { weight: '', reps: '' }] },
-      { name: 'Подтягивания', sets: [{ weight: '', reps: '8' }] },
-    ] },
-  },
-  cardio: {
-    component: CardioInput,
-    mission: { target: { duration: 30, unit: 'мин' } },
-    initialData: { duration: '', distance: '', notes: '' },
-  },
-  metric: {
-    component: MetricInput,
-    mission: { metric: 'вес', unit: 'кг', range: { min: 30, max: 250 } },
-    initialData: { value: '' },
-  },
-  metrics: {
-    component: MetricsInput,
-    mission: { metrics: [
-      { key: 'chest', label: 'грудь', unit: 'см', hint: 'на уровне сосков, на выдохе', range: { min: 60, max: 180 } },
-      { key: 'waist', label: 'талия', unit: 'см', hint: 'на уровне пупка, не втягивая живот', range: { min: 50, max: 180 } },
-    ] },
-    initialData: { values: {} },
-  },
-  photo: {
-    component: PhotoInput,
-    mission: { angles: ['фронт', 'бок', 'спина'] },
-    initialData: { photos: [null, null, null] },
-  },
-  checkbox: {
-    component: CheckboxInput,
-    mission: {},
-    initialData: { checked: false },
-  },
-  text: {
-    component: TextInput,
-    mission: { prompt: 'Что ты узнал о себе за эти 21 день?' },
-    initialData: { text: '' },
-  },
-  bodyfat: {
-    component: BodyFatInput,
-    mission: {},
-    initialData: { level: null, value: null },
-    extraProps: { profile: { gender: 'male' } },
-  },
-  timer: {
-    component: TimerInput,
-    mission: { metric: 'планка' },
-    initialData: { value: '' },
-  },
-}
+const day1 = generateMissionsForDay(1)
+const day7 = generateMissionsForDay(7)
+const allMissions = [...day1, ...day7]
+const mockProfile = { gender: 'male', age: 30, height: 180, weight: 80 }
 
-const TYPES = Object.keys(MOCKS)
+export default function App() {
+  const [openId, setOpenId] = useState(null)
+  const [completed, setCompleted] = useState(null)
 
-function InputHarness({ type }) {
-  const cfg = MOCKS[type]
-  const Comp = cfg.component
-  const [data, setData] = useState(cfg.initialData)
-  const merged = (patch) => setData(prev => ({ ...prev, ...patch }))
+  const openMission = allMissions.find(m => m.id === openId)
 
   return (
-    <Comp
-      mission={cfg.mission}
-      data={data}
-      setData={typeof cfg.initialData === 'object' && !Array.isArray(cfg.initialData) ? merged : setData}
-      {...(cfg.extraProps || {})}
-    />
+    <div style={{ padding: '24px 0', fontFamily: F.body, color: C.text, fontSize: 13, lineHeight: 1.6, maxWidth: 720, margin: '0 auto', minHeight: '100vh' }}>
+      <h1 style={{ fontFamily: F.display, color: C.pink, letterSpacing: '0.2em', padding: '0 22px', marginBottom: 16 }}>
+        smoke 3.4 · MissionDetail
+      </h1>
+      <div style={{ padding: '0 22px', marginBottom: 24, fontFamily: F.mono, fontSize: 11, color: C.textDim }}>
+        тапни любую миссию, заполни поле, нажми «Миссия Завершена» — увидишь data в console
+      </div>
+
+      {completed && (
+        <div style={{
+          margin: '0 22px 24px', padding: 12,
+          background: C.tealSoft, border: `1px solid ${C.tealBorder}`,
+          fontFamily: F.mono, fontSize: 11, color: C.teal, clipPath: smallAngleClip,
+        }}>
+          last completed → {completed.code}: {JSON.stringify(completed.data).slice(0, 120)}
+        </div>
+      )}
+
+      <SectionHeader sub={`day 1 · ${day1.length}`}>missions</SectionHeader>
+      <MissionList missions={day1} onOpen={setOpenId} />
+
+      <div style={{ height: 16 }} />
+
+      <SectionHeader sub={`day 7 · ${day7.length}`}>missions</SectionHeader>
+      <MissionList missions={day7} onOpen={setOpenId} />
+
+      {openMission && (
+        <MissionDetail
+          mission={openMission}
+          profile={mockProfile}
+          onComplete={(data) => {
+            setCompleted({ code: openMission.code, data })
+            setOpenId(null)
+          }}
+          onAbort={() => setOpenId(null)}
+        />
+      )}
+    </div>
   )
 }
 
-export default function App() {
-  const [active, setActive] = useState('workout')
+function MissionList({ missions, onOpen }) {
   return (
-    <div style={{ padding: '24px 0', fontFamily: F.body, color: C.text, fontSize: 13, lineHeight: 1.6, maxWidth: 720, margin: '0 auto', minHeight: '100vh' }}>
-      <h1 style={{ fontFamily: F.display, color: C.pink, letterSpacing: '0.2em', padding: '0 22px', marginBottom: 24 }}>
-        smoke 3.3 · input components
-      </h1>
-
-      <SectionHeader sub={`${TYPES.length} types`}>switch</SectionHeader>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 22px', marginBottom: 24 }}>
-        {TYPES.map(t => (
-          <button key={t} onClick={() => setActive(t)} style={{
-            background: active === t ? C.pink : 'transparent',
-            color: active === t ? C.bg : C.textDim,
-            border: `1px solid ${active === t ? C.pink : C.border}`,
-            padding: '6px 12px',
-            fontFamily: F.mono, fontSize: 10,
-            letterSpacing: '0.18em', textTransform: 'uppercase',
-            cursor: 'pointer',
-          }}>{t}</button>
-        ))}
-      </div>
-
-      <div style={{ padding: '0 22px' }}>
-        <InputHarness key={active} type={active} />
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 22px' }}>
+      {missions.map(m => (
+        <button key={m.id} onClick={() => onOpen(m.id)} style={{
+          background: C.bgCard, border: `1px solid ${C.border}`,
+          color: C.text, padding: '10px 14px', cursor: 'pointer',
+          textAlign: 'left', clipPath: smallAngleClip,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+        }}>
+          <span style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.18em', minWidth: 32 }}>
+            [{m.num}]
+          </span>
+          <span style={{ flex: 1, fontFamily: F.body, fontSize: 12 }}>
+            {m.title || m.code} <span style={{ color: C.textFaint }}>· {m.inputType}</span>
+          </span>
+          <span style={{ fontFamily: F.mono, fontSize: 10, color: C.pink }}>+{m.xp}</span>
+        </button>
+      ))}
     </div>
   )
 }
