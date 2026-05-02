@@ -1,55 +1,65 @@
-// Smoke test for Stage 3.1 — imports every new lib module to catch
-// syntax errors, missing exports, or circular deps. Will be replaced
-// by the real App in Stage 3.7.
-import { C, F, angleClip } from './lib/tokens.js'
-import { STAT_CODES, calcOVR, calcTier, calibrateFromDay1, determineCampaignMode, calibrateGoals, BODY_FAT_LEVELS } from './lib/calibration.js'
-import { DAY_1_MISSIONS, BOSS_DAYS, generateMissionsForDay, getChapterByDay } from './lib/missions.js'
-import { getInitialState, computeCurrentDay, formatSaveTime } from './lib/persistence.js'
+// Smoke test for Stage 3.2 — adds icons + primitives on top of the
+// 3.1 lib smoke. Will be replaced by the real App in Stage 3.7.
+import { useState } from 'react'
+import { C, F } from './lib/tokens.js'
+import { calcOVR, calcTier, calibrateFromDay1, calibrateGoals } from './lib/calibration.js'
+import { generateMissionsForDay, getChapterByDay } from './lib/missions.js'
+import { getInitialState } from './lib/persistence.js'
+import * as Icons from './components/icons.jsx'
+import SectionHeader from './components/SectionHeader.jsx'
+import CompactInput from './components/inputs/CompactInput.jsx'
+import FormField from './components/inputs/FormField.jsx'
+import SectionLabel from './components/inputs/SectionLabel.jsx'
 
 const sampleStats = { 'СИЛ': 50, 'ВЫН': 45, 'МАС': 60, 'ПИТ': 25, 'ВОС': 50, 'ФОР': 55 }
 const sampleProfile = { age: 30, gender: 'male', height: 180, weight: 80 }
 const sampleDay1 = { weight: 80, bodyFat: 18, maxPushups: 25, plankSec: 90 }
 
-const probes = {
-  'tokens.js': { 'C.bg': C.bg, 'F.display': F.display.slice(0, 16), 'angleClip': angleClip.slice(0, 24) + '…' },
-  'calibration.js': {
-    STAT_CODES: STAT_CODES.join(','),
-    'calcOVR(sample)': calcOVR(sampleStats),
-    'calcTier(70)': calcTier(70).display,
-    'calibrateFromDay1': JSON.stringify(calibrateFromDay1(sampleProfile, sampleDay1)),
-    'determineCampaignMode': determineCampaignMode('male', 18),
-    'calibrateGoals(mass)': JSON.stringify(calibrateGoals(sampleStats, 'mass')),
-    'BODY_FAT_LEVELS.male.length': BODY_FAT_LEVELS.male.length,
-  },
-  'missions.js': {
-    'DAY_1_MISSIONS.length': DAY_1_MISSIONS.length,
-    'BOSS_DAYS': BOSS_DAYS.join(','),
-    'generateMissionsForDay(1)': generateMissionsForDay(1).length,
-    'generateMissionsForDay(7)': generateMissionsForDay(7).length,
-    'generateMissionsForDay(21)': generateMissionsForDay(21).length,
-    'getChapterByDay(50)': getChapterByDay(50).display,
-  },
-  'persistence.js': {
-    'getInitialState()': String(getInitialState()),
-    'computeCurrentDay(now)': computeCurrentDay(new Date().toISOString()),
-    'formatSaveTime(now)': formatSaveTime(Date.now()),
-  },
+const libProbes = {
+  'calcOVR': calcOVR(sampleStats),
+  'calcTier(70).display': calcTier(70).display,
+  'calibrateFromDay1.СИЛ': calibrateFromDay1(sampleProfile, sampleDay1)['СИЛ'],
+  'calibrateGoals(mass).СИЛ': calibrateGoals(sampleStats, 'mass')['СИЛ'],
+  'generateMissionsForDay(7)': generateMissionsForDay(7).length,
+  'getChapterByDay(50)': getChapterByDay(50).display,
+  'getInitialState()': String(getInitialState()),
 }
 
-console.log('lib smoke', probes)
+console.log('smoke 3.2', { libProbes, iconsCount: Object.keys(Icons).length })
 
 export default function App() {
+  const [val, setVal] = useState('')
   return (
-    <div style={{ padding: 24, fontFamily: F.mono, color: C.text, fontSize: 12, lineHeight: 1.6 }}>
-      <h1 style={{ fontFamily: F.display, color: C.pink, letterSpacing: '0.2em' }}>ГИПЕР_ПРОТОКОЛ · lib smoke</h1>
-      {Object.entries(probes).map(([mod, vals]) => (
-        <section key={mod} style={{ margin: '16px 0' }}>
-          <h2 style={{ color: C.teal, fontSize: 14, letterSpacing: '0.15em' }}>{mod}</h2>
-          <pre style={{ background: C.bgCard, padding: 12, overflow: 'auto', color: C.textDim }}>
-            {Object.entries(vals).map(([k, v]) => `${k}: ${v}`).join('\n')}
-          </pre>
-        </section>
-      ))}
+    <div style={{ padding: 24, fontFamily: F.body, color: C.text, fontSize: 13, lineHeight: 1.6, maxWidth: 720, margin: '0 auto' }}>
+      <h1 style={{ fontFamily: F.display, color: C.pink, letterSpacing: '0.2em', marginBottom: 24 }}>
+        ГИПЕР_ПРОТОКОЛ · smoke 3.2
+      </h1>
+
+      <SectionHeader sub="3.1 carry-over">lib values</SectionHeader>
+      <pre style={{ background: C.bgCard, padding: 12, color: C.textDim, fontFamily: F.mono, fontSize: 11, margin: '0 22px 24px' }}>
+        {Object.entries(libProbes).map(([k, v]) => `${k}: ${v}`).join('\n')}
+      </pre>
+
+      <SectionHeader sub={`${Object.keys(Icons).length} total`}>icons</SectionHeader>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, padding: '0 22px', marginBottom: 24, color: C.teal }}>
+        {Object.entries(Icons).map(([name, IconComp]) => (
+          <div key={name} title={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontFamily: F.mono, fontSize: 9, color: C.textFaint }}>
+            <IconComp size={22} />
+            {name}
+          </div>
+        ))}
+      </div>
+
+      <SectionHeader sub="interactive">primitives</SectionHeader>
+      <div style={{ padding: '0 22px', display: 'grid', gap: 16 }}>
+        <SectionLabel>▸ section label</SectionLabel>
+        <FormField label="вес" unit="кг">
+          <CompactInput type="number" value={val} onChange={setVal} placeholder="0" />
+        </FormField>
+        <FormField label="рост" unit="см" optional>
+          <CompactInput type="number" value="" onChange={() => {}} placeholder="180" error />
+        </FormField>
+      </div>
     </div>
   )
 }
