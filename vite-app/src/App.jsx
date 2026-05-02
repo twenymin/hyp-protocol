@@ -1,84 +1,274 @@
-// Smoke test for Stage 3.6 — switcher between Today / Agent / Story /
-// Settings with a mock state. Lets us verify each screen renders with
-// realistic data before assembling the real App in 3.7.
-import { useState } from 'react'
-import { C, F, smallAngleClip } from './lib/tokens.js'
-import { generateMissionsForDay } from './lib/missions.js'
-import TodayScreen from './screens/TodayScreen.jsx'
-import AgentScreen from './screens/AgentScreen.jsx'
-import StoryScreen from './screens/StoryScreen.jsx'
-import SettingsScreen from './screens/SettingsScreen.jsx'
-
-const mockProfile = { name: 'МАКС', age: 30, gender: 'male', height: 180, weight: 80, classCode: 'HYP' }
-const mockStats = { 'СИЛ': 55, 'ВЫН': 48, 'МАС': 62, 'ПИТ': 30, 'ВОС': 50, 'ФОР': 58 }
-const mockGoals = { 'СИЛ': 73, 'ВЫН': 58, 'МАС': 84, 'ПИТ': 55, 'ВОС': 68, 'ФОР': 70 }
-
-const stateWithStats = {
-  startDate: '2026-04-15T00:00:00.000Z',
-  stats: mockStats,
-  goals: mockGoals,
-  mode: 'mass',
-  profile: mockProfile,
-  daysData: {
-    '1': { missions: generateMissionsForDay(1).map((m, i) => ({ ...m, done: i < 4 })), xpEarned: 500, completed: false },
-    '2': { missions: [], xpEarned: 200, completed: true },
-    '3': { missions: [], xpEarned: 150, completed: true },
-  },
-  totalXP: 1850,
-}
-
-const stateNullStats = { ...stateWithStats, stats: null, goals: null, mode: null, totalXP: 0, daysData: {} }
-
-const SCREENS = ['today', 'agent', 'story', 'cfg']
-const DAYS = [1, 7, 21, 50]
-const VARIANTS = { 'with stats': stateWithStats, 'null stats (day 1)': stateNullStats }
+import { useState, useEffect } from 'react';
+import { C, F } from './lib/tokens.js';
+import { STORAGE_KEY, getInitialState, computeCurrentDay, saveState, logSaveEvent } from './lib/persistence.js';
+import { BODY_FAT_LEVELS, XP_TO_STAT_RATIO, calibrateFromDay1, determineCampaignMode, calibrateGoals } from './lib/calibration.js';
+import { generateMissionsForDay } from './lib/missions.js';
+import { Home, MapIcon, User, Settings } from './components/icons.jsx';
+import MissionDetail from './components/MissionDetail.jsx';
+import SaveToast from './components/SaveToast.jsx';
+import ResetModal from './components/ResetModal.jsx';
+import OnboardingFlow from './screens/OnboardingFlow.jsx';
+import TodayScreen from './screens/TodayScreen.jsx';
+import AgentScreen from './screens/AgentScreen.jsx';
+import StoryScreen from './screens/StoryScreen.jsx';
+import SettingsScreen from './screens/SettingsScreen.jsx';
 
 export default function App() {
-  const [screen, setScreen] = useState('today')
-  const [day, setDay] = useState(7)
-  const [variantName, setVariantName] = useState('with stats')
-  const state = VARIANTS[variantName]
-  const missions = generateMissionsForDay(day, state.mode || 'mass').map((m, i) => ({ ...m, done: i % 3 === 0 }))
+  const [view, setView] = useState('today');
+  const [state, setState] = useState(getInitialState);
+  const [currentDay, setCurrentDay] = useState(() => {
+    const s = getInitialState();
+    return s ? computeCurrentDay(s.startDate) : 1;
+  });
+  const [openMissionId, setOpenMissionId] = useState(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const handleOnboardingComplete = (newState) => {
+    setState(newState);
+    setCurrentDay(computeCurrentDay(newState.startDate));
+  };
+
+  const dayKey = String(currentDay);
+  const dayData = state?.daysData?.[dayKey];
+  const missions = dayData?.missions || [];
+  const openMission = openMissionId ? missions.find(m => m.id === openMissionId) : null;
+
+  useEffect(() => {
+    if (!state) return;
+    if (!state.daysData[dayKey]) {
+      const newMissions = generateMissionsForDay(currentDay, state.mode || 'mass');
+      setState(s => {
+        const newState = {
+          ...s,
+          daysData: { ...s.daysData, [dayKey]: { missions: newMissions, xpEarned: 0, completed: false } },
+        };
+        saveState(newState);
+        return newState;
+      });
+    }
+    // eslint-disable-next-line
+  }, [currentDay, state]);
+
+  useEffect(() => {
+    if (!state) return;
+    const checkDay = () => {
+      const newDay = computeCurrentDay(state.startDate);
+      if (newDay !== currentDay) {
+        setCurrentDay(newDay);
+        logSaveEvent('day_rollover', `${currentDay}->${newDay}`);
+      }
+    };
+    // Periodic check (covers case when app stays open across midnight)
+    const interval = setInterval(checkDay, 60000);
+    // Visibility check (covers PWA reopen after hours/days)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') checkDay();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    // Focus check (some iOS scenarios fire focus, not visibilitychange)
+    window.addEventListener('focus', checkDay);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', checkDay);
+    };
+  }, [state, currentDay]);
+
+  // ===== Render onboarding if no state =====
+  if (!state) {
+    return (
+      <>
+        <OnboardingFlow onComplete={handleOnboardingComplete} />
+        <SaveToast />
+      </>
+    );
+  }
+
+  const handleMissionClick = (missionId) => {
+    setOpenMissionId(missionId);
+  };
+
+  const handleMissionComplete = (data) => {
+    setState(s => {
+      const day = s.daysData[dayKey];
+      if (!day) return s;
+
+      const mission = day.missions.find(m => m.id === openMissionId);
+      if (!mission || mission.done) return s;
+
+      const updatedMissions = day.missions.map(m =>
+        m.id === openMissionId ? { ...m, done: true, data, completedAt: new Date().toISOString() } : m
+      );
+      const xpDelta = mission.xp;
+      const allDone = updatedMissions.every(m => m.done);
+
+      let newStats = s.stats;
+      let newGoals = s.goals;
+      let newMode = s.mode;
+
+      // Special: CALIBRATION_COMPLETE triggers stats + mode calculation from Day 1 data
+      if (mission.code === 'CALIBRATION_COMPLETE') {
+        // Collect calibration data from Day 1 missions
+        const findData = (code) => updatedMissions.find(m => m.code === code)?.data;
+        const weight = Number(findData('BASELINE_WEIGHT')?.value || s.profile.weight);
+        const bodyFatLevel = findData('BODY_FAT_ESTIMATE')?.level;
+        const gender = s.profile.gender || 'male';
+        const bfLevels = BODY_FAT_LEVELS[gender] || BODY_FAT_LEVELS.male;
+        const bodyFat = bfLevels.find(l => l.id === bodyFatLevel)?.value || 20;
+        const maxPushups = Number(findData('PUSHUP_TEST')?.value || 0);
+        const plankSec = Number(findData('PLANK_TEST')?.value || 0);
+
+        newStats = calibrateFromDay1(s.profile, { weight, bodyFat, maxPushups, plankSec });
+        newMode = determineCampaignMode(gender, bodyFat);
+        newGoals = calibrateGoals(newStats, newMode);
+      } else if (s.stats !== null) {
+        // Normal stat update only if calibration is done
+        const statDelta = mission.xp * XP_TO_STAT_RATIO;
+        const statKey = mission.stat;
+        if (s.stats[statKey] !== undefined) {
+          newStats = { ...s.stats, [statKey]: Math.max(0, Math.min(99, s.stats[statKey] + statDelta)) };
+        }
+      }
+      // else: stats still null (mid-calibration, before CALIBRATION_COMPLETE) — don't touch
+
+      const newState = {
+        ...s,
+        daysData: {
+          ...s.daysData,
+          [dayKey]: { ...day, missions: updatedMissions, xpEarned: day.xpEarned + xpDelta, completed: allDone },
+        },
+        stats: newStats,
+        goals: newGoals,
+        mode: newMode,
+        totalXP: s.totalXP + xpDelta,
+      };
+      saveState(newState);
+      return newState;
+    });
+    setOpenMissionId(null);
+  };
+
+  const handleMissionAbort = () => {
+    setOpenMissionId(null);
+  };
+
+  const handleReset = () => {
+    setShowResetConfirm(true);
+  };
+
+  const confirmReset = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.clear();  // belt-and-suspenders
+    } catch (e) {}
+    // Force full page reload — guarantees clean state, bypasses React state issues
+    window.location.reload();
+  };
+
+  const navItems = [
+    { id: 'today', Icon: Home, label: 'СЕГОДНЯ' },
+    { id: 'story', Icon: MapIcon, label: 'ПУТЬ' },
+    { id: 'agent', Icon: User, label: 'ГЕРОЙ' },
+    { id: 'cfg', Icon: Settings, label: 'НАСТР' },
+  ];
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: F.body, paddingBottom: 80 }}>
+    <>
       <div style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: C.bgPanel, borderBottom: `1px solid ${C.border}`,
-        padding: '10px 14px', display: 'flex', flexWrap: 'wrap', gap: 6,
-        fontFamily: F.mono, fontSize: 10,
+        minHeight: '100vh', minHeight: '100dvh', background: C.bg,
+        backgroundImage: `linear-gradient(rgba(255,46,99,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,46,99,0.025) 1px, transparent 1px)`,
+        backgroundSize: '24px 24px',
+        color: C.text, fontFamily: F.body,
+        display: 'flex', justifyContent: 'center',
+        position: 'relative', overflow: 'hidden',
       }}>
-        <span style={{ color: C.textFaint, letterSpacing: '0.18em', textTransform: 'uppercase' }}>screen:</span>
-        {SCREENS.map(s => (
-          <button key={s} onClick={() => setScreen(s)} style={chipStyle(screen === s, C.pink)}>{s}</button>
-        ))}
-        <span style={{ color: C.textFaint, letterSpacing: '0.18em', textTransform: 'uppercase', marginLeft: 12 }}>day:</span>
-        {DAYS.map(d => (
-          <button key={d} onClick={() => setDay(d)} style={chipStyle(day === d, C.teal)}>{d}</button>
-        ))}
-        <span style={{ color: C.textFaint, letterSpacing: '0.18em', textTransform: 'uppercase', marginLeft: 12 }}>variant:</span>
-        {Object.keys(VARIANTS).map(v => (
-          <button key={v} onClick={() => setVariantName(v)} style={chipStyle(variantName === v, C.gold)}>{v}</button>
-        ))}
+        <div key={view} style={{
+          position: 'absolute', left: 0, right: 0,
+          height: 2, background: `linear-gradient(to bottom, transparent, ${C.pink}, transparent)`,
+          animation: 'scan 1.4s ease-out 1', opacity: 0.6,
+          pointerEvents: 'none', zIndex: 100,
+        }} />
+
+        <div style={{
+          width: '100%', maxWidth: 440, minHeight: '100vh', minHeight: '100dvh',
+          background: C.bgPanel, display: 'flex', flexDirection: 'column',
+          position: 'relative',
+          paddingTop: 'env(safe-area-inset-top)',
+        }}>
+          <div style={{
+            padding: '14px 18px 0',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            fontFamily: F.mono, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.success, animation: 'blink 2s infinite' }} />
+              <span style={{ color: C.success }}>на связи</span>
+            </div>
+            <div style={{ color: C.textFaint }}>гипер.протокол</div>
+            <div style={{ color: C.pink }}>день {String(currentDay).padStart(3, '0')}/084</div>
+          </div>
+
+          <div key={view} style={{ display: 'flex', flexDirection: 'column' }}>
+            {view === 'today' && <TodayScreen state={state} currentDay={currentDay} missions={missions} onMissionClick={handleMissionClick} />}
+            {view === 'agent' && <AgentScreen state={state} currentDay={currentDay} onReset={handleReset} />}
+            {view === 'story' && <StoryScreen state={state} currentDay={currentDay} />}
+            {view === 'cfg' && <SettingsScreen />}
+          </div>
+
+          <div style={{ flex: 1, minHeight: 32 }} />
+
+          <nav style={{
+            borderTop: `1px solid ${C.border}`, background: C.bg,
+            display: 'flex', justifyContent: 'space-around',
+            padding: '14px 0 calc(14px + env(safe-area-inset-bottom))',
+            position: 'relative',
+          }}>
+            {navItems.map(({ id, Icon, label }) => {
+              const active = view === id;
+              return (
+                <button key={id} onClick={() => setView(id)} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  padding: '6px 14px',
+                  color: active ? C.pink : C.textFaint,
+                  fontFamily: F.display, position: 'relative',
+                  transition: 'color 0.3s',
+                  minHeight: 56, minWidth: 64,
+                }}>
+                  {active && (
+                    <div style={{
+                      position: 'absolute', top: -14, left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 32, height: 2, background: C.pink,
+                      boxShadow: `0 0 8px ${C.pinkGlow}`,
+                    }} />
+                  )}
+                  <Icon size={20} strokeWidth={1.8} />
+                  <span style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.16em' }}>{label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
-      <div style={{ maxWidth: 440, margin: '0 auto' }}>
-        {screen === 'today' && <TodayScreen state={state} currentDay={day} missions={missions} onMissionClick={(id) => console.log('clicked', id)} />}
-        {screen === 'agent' && <AgentScreen state={state} currentDay={day} onReset={() => console.log('reset')} />}
-        {screen === 'story' && <StoryScreen state={state} currentDay={day} />}
-        {screen === 'cfg' && <SettingsScreen />}
-      </div>
-    </div>
-  )
-}
+      {openMission && (
+        <MissionDetail
+          mission={openMission}
+          profile={state.profile}
+          onComplete={handleMissionComplete}
+          onAbort={handleMissionAbort}
+        />
+      )}
 
-function chipStyle(active, accent) {
-  return {
-    background: active ? accent : 'transparent',
-    color: active ? C.bg : C.textDim,
-    border: `1px solid ${active ? accent : C.border}`,
-    padding: '4px 10px', cursor: 'pointer',
-    fontFamily: F.mono, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase',
-    clipPath: smallAngleClip,
-  }
+      <SaveToast />
+
+      {showResetConfirm && (
+        <ResetModal
+          onCancel={() => setShowResetConfirm(false)}
+          onConfirm={confirmReset}
+        />
+      )}
+    </>
+  );
 }
