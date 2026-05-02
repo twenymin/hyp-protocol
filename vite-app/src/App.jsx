@@ -1,64 +1,117 @@
-// Smoke test for Stage 3.2 — adds icons + primitives on top of the
-// 3.1 lib smoke. Will be replaced by the real App in Stage 3.7.
+// Smoke test for Stage 3.3 — switcher between all 9 input components
+// with mock missions and per-component local state. Will be replaced
+// by the real App in Stage 3.7.
 import { useState } from 'react'
 import { C, F } from './lib/tokens.js'
-import { calcOVR, calcTier, calibrateFromDay1, calibrateGoals } from './lib/calibration.js'
-import { generateMissionsForDay, getChapterByDay } from './lib/missions.js'
-import { getInitialState } from './lib/persistence.js'
-import * as Icons from './components/icons.jsx'
 import SectionHeader from './components/SectionHeader.jsx'
-import CompactInput from './components/inputs/CompactInput.jsx'
-import FormField from './components/inputs/FormField.jsx'
-import SectionLabel from './components/inputs/SectionLabel.jsx'
+import WorkoutInput from './components/inputs/WorkoutInput.jsx'
+import CardioInput from './components/inputs/CardioInput.jsx'
+import MetricInput from './components/inputs/MetricInput.jsx'
+import MetricsInput from './components/inputs/MetricsInput.jsx'
+import PhotoInput from './components/inputs/PhotoInput.jsx'
+import CheckboxInput from './components/inputs/CheckboxInput.jsx'
+import TextInput from './components/inputs/TextInput.jsx'
+import BodyFatInput from './components/inputs/BodyFatInput.jsx'
+import TimerInput from './components/inputs/TimerInput.jsx'
 
-const sampleStats = { 'СИЛ': 50, 'ВЫН': 45, 'МАС': 60, 'ПИТ': 25, 'ВОС': 50, 'ФОР': 55 }
-const sampleProfile = { age: 30, gender: 'male', height: 180, weight: 80 }
-const sampleDay1 = { weight: 80, bodyFat: 18, maxPushups: 25, plankSec: 90 }
-
-const libProbes = {
-  'calcOVR': calcOVR(sampleStats),
-  'calcTier(70).display': calcTier(70).display,
-  'calibrateFromDay1.СИЛ': calibrateFromDay1(sampleProfile, sampleDay1)['СИЛ'],
-  'calibrateGoals(mass).СИЛ': calibrateGoals(sampleStats, 'mass')['СИЛ'],
-  'generateMissionsForDay(7)': generateMissionsForDay(7).length,
-  'getChapterByDay(50)': getChapterByDay(50).display,
-  'getInitialState()': String(getInitialState()),
+const MOCKS = {
+  workout: {
+    component: WorkoutInput,
+    mission: {},
+    initialData: { exercises: [
+      { name: 'Жим лёжа', sets: [{ weight: '60', reps: '10' }, { weight: '', reps: '' }] },
+      { name: 'Подтягивания', sets: [{ weight: '', reps: '8' }] },
+    ] },
+  },
+  cardio: {
+    component: CardioInput,
+    mission: { target: { duration: 30, unit: 'мин' } },
+    initialData: { duration: '', distance: '', notes: '' },
+  },
+  metric: {
+    component: MetricInput,
+    mission: { metric: 'вес', unit: 'кг', range: { min: 30, max: 250 } },
+    initialData: { value: '' },
+  },
+  metrics: {
+    component: MetricsInput,
+    mission: { metrics: [
+      { key: 'chest', label: 'грудь', unit: 'см', hint: 'на уровне сосков, на выдохе', range: { min: 60, max: 180 } },
+      { key: 'waist', label: 'талия', unit: 'см', hint: 'на уровне пупка, не втягивая живот', range: { min: 50, max: 180 } },
+    ] },
+    initialData: { values: {} },
+  },
+  photo: {
+    component: PhotoInput,
+    mission: { angles: ['фронт', 'бок', 'спина'] },
+    initialData: { photos: [null, null, null] },
+  },
+  checkbox: {
+    component: CheckboxInput,
+    mission: {},
+    initialData: { checked: false },
+  },
+  text: {
+    component: TextInput,
+    mission: { prompt: 'Что ты узнал о себе за эти 21 день?' },
+    initialData: { text: '' },
+  },
+  bodyfat: {
+    component: BodyFatInput,
+    mission: {},
+    initialData: { level: null, value: null },
+    extraProps: { profile: { gender: 'male' } },
+  },
+  timer: {
+    component: TimerInput,
+    mission: { metric: 'планка' },
+    initialData: { value: '' },
+  },
 }
 
-console.log('smoke 3.2', { libProbes, iconsCount: Object.keys(Icons).length })
+const TYPES = Object.keys(MOCKS)
+
+function InputHarness({ type }) {
+  const cfg = MOCKS[type]
+  const Comp = cfg.component
+  const [data, setData] = useState(cfg.initialData)
+  const merged = (patch) => setData(prev => ({ ...prev, ...patch }))
+
+  return (
+    <Comp
+      mission={cfg.mission}
+      data={data}
+      setData={typeof cfg.initialData === 'object' && !Array.isArray(cfg.initialData) ? merged : setData}
+      {...(cfg.extraProps || {})}
+    />
+  )
+}
 
 export default function App() {
-  const [val, setVal] = useState('')
+  const [active, setActive] = useState('workout')
   return (
-    <div style={{ padding: 24, fontFamily: F.body, color: C.text, fontSize: 13, lineHeight: 1.6, maxWidth: 720, margin: '0 auto' }}>
-      <h1 style={{ fontFamily: F.display, color: C.pink, letterSpacing: '0.2em', marginBottom: 24 }}>
-        ГИПЕР_ПРОТОКОЛ · smoke 3.2
+    <div style={{ padding: '24px 0', fontFamily: F.body, color: C.text, fontSize: 13, lineHeight: 1.6, maxWidth: 720, margin: '0 auto', minHeight: '100vh' }}>
+      <h1 style={{ fontFamily: F.display, color: C.pink, letterSpacing: '0.2em', padding: '0 22px', marginBottom: 24 }}>
+        smoke 3.3 · input components
       </h1>
 
-      <SectionHeader sub="3.1 carry-over">lib values</SectionHeader>
-      <pre style={{ background: C.bgCard, padding: 12, color: C.textDim, fontFamily: F.mono, fontSize: 11, margin: '0 22px 24px' }}>
-        {Object.entries(libProbes).map(([k, v]) => `${k}: ${v}`).join('\n')}
-      </pre>
-
-      <SectionHeader sub={`${Object.keys(Icons).length} total`}>icons</SectionHeader>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, padding: '0 22px', marginBottom: 24, color: C.teal }}>
-        {Object.entries(Icons).map(([name, IconComp]) => (
-          <div key={name} title={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontFamily: F.mono, fontSize: 9, color: C.textFaint }}>
-            <IconComp size={22} />
-            {name}
-          </div>
+      <SectionHeader sub={`${TYPES.length} types`}>switch</SectionHeader>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 22px', marginBottom: 24 }}>
+        {TYPES.map(t => (
+          <button key={t} onClick={() => setActive(t)} style={{
+            background: active === t ? C.pink : 'transparent',
+            color: active === t ? C.bg : C.textDim,
+            border: `1px solid ${active === t ? C.pink : C.border}`,
+            padding: '6px 12px',
+            fontFamily: F.mono, fontSize: 10,
+            letterSpacing: '0.18em', textTransform: 'uppercase',
+            cursor: 'pointer',
+          }}>{t}</button>
         ))}
       </div>
 
-      <SectionHeader sub="interactive">primitives</SectionHeader>
-      <div style={{ padding: '0 22px', display: 'grid', gap: 16 }}>
-        <SectionLabel>▸ section label</SectionLabel>
-        <FormField label="вес" unit="кг">
-          <CompactInput type="number" value={val} onChange={setVal} placeholder="0" />
-        </FormField>
-        <FormField label="рост" unit="см" optional>
-          <CompactInput type="number" value="" onChange={() => {}} placeholder="180" error />
-        </FormField>
+      <div style={{ padding: '0 22px' }}>
+        <InputHarness key={active} type={active} />
       </div>
     </div>
   )
