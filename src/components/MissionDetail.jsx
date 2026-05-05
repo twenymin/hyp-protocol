@@ -49,7 +49,6 @@ export default function MissionDetail({ mission, profile, onComplete, onAbort })
         background: C.bgPanel,
         display: 'flex', flexDirection: 'column',
         position: 'relative',
-        minHeight: '100vh',
         minHeight: '100dvh',
       }}>
         {/* Header */}
@@ -87,7 +86,7 @@ export default function MissionDetail({ mission, profile, onComplete, onAbort })
         <div style={{ flex: 1, padding: '24px 18px' }}>
           {mission.inputType === 'workout' && <WorkoutInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'cardio' && <CardioInput mission={mission} data={data} setData={setData} />}
-          {mission.inputType === 'metric' && <MetricInput mission={mission} data={data} setData={setData} profile={profile} />}
+          {mission.inputType === 'metric' && <MetricInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'metrics' && <MetricsInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'photo' && <PhotoInput mission={mission} data={data} setData={setData} />}
           {mission.inputType === 'checkbox' && <CheckboxInput mission={mission} data={data} setData={setData} />}

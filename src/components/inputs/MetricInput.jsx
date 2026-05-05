@@ -1,10 +1,7 @@
 import { C, F, smallAngleClip } from '../../lib/tokens.js';
 import SectionLabel from './SectionLabel.jsx';
 
-// NOTE: `profile` prop is kept in the signature to match the original
-// game.js API even though it is unused — see TODO.md, removal is queued
-// for after the migration completes.
-export default function MetricInput({ mission, data, setData, profile }) {
+export default function MetricInput({ mission, data, setData }) {
   const n = Number(data.value);
   const isNumber = data.value !== '' && Number.isFinite(n);
   const range = mission.range;

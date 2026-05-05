@@ -175,7 +175,7 @@ export default function App() {
   return (
     <>
       <div style={{
-        minHeight: '100vh', minHeight: '100dvh', background: C.bg,
+        minHeight: '100dvh', background: C.bg,
         backgroundImage: `linear-gradient(rgba(255,46,99,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,46,99,0.025) 1px, transparent 1px)`,
         backgroundSize: '24px 24px',
         color: C.text, fontFamily: F.body,
@@ -190,7 +190,7 @@ export default function App() {
         }} />
 
         <div style={{
-          width: '100%', maxWidth: 440, minHeight: '100vh', minHeight: '100dvh',
+          width: '100%', maxWidth: 440, minHeight: '100dvh',
           background: C.bgPanel, display: 'flex', flexDirection: 'column',
           position: 'relative',
           paddingTop: 'env(safe-area-inset-top)',
