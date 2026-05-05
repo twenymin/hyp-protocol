@@ -1,65 +1,47 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#0F0B1A" />
-  <title>ГИПЕР_ПРОТОКОЛ</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#0F0B1A" />
+    <title>ГИПЕР_ПРОТОКОЛ</title>
 
-  <!-- PWA manifest -->
-  <link rel="manifest" href="./manifest.json" />
+    <!-- PWA install support — apple-* for iOS Safari, the standalone
+         W3C tag for Chrome / Edge / modern browsers (apple-* is now
+         deprecated outside iOS but still required there). -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ГИПЕР" />
+    <link rel="apple-touch-icon" href="./apple-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
 
-  <!-- iOS PWA support -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="ГИПЕР" />
-  <link rel="apple-touch-icon" href="./apple-icon.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="./apple-icon.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
-  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <!-- Fonts: Bebas Neue + Inter + IBM Plex Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <!-- Fonts: Bebas Neue + Inter + IBM Plex Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-
-  <style>
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-    html, body, #root {
-      margin: 0; padding: 0;
-      background: #0F0B1A;
-      min-height: 100vh;
-      min-height: 100dvh;
-      overscroll-behavior: none;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    input, textarea { -webkit-user-select: text; user-select: text; }
-
-    #root:empty::before {
-      content: 'ГИПЕР_ПРОТОКОЛ · загрузка...';
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      color: #FF2E63;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 12px;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      text-shadow: 0 0 20px rgba(255, 46, 99, 0.4);
-    }
-  </style>
-
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
-  <script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel" data-presets="react" src="./game.js"></script>
-</body>
+    <style>
+      #root:empty::before {
+        content: 'ГИПЕР_ПРОТОКОЛ · загрузка...';
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        color: #FF2E63;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 12px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        text-shadow: 0 0 20px rgba(255, 46, 99, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

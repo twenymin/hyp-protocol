@@ -1,0 +1,28 @@
+/* Globals — keyframes and form resets used across screens. The original
+   game.js inlined these via <style> blocks inside App; in the modular
+   structure they live here so any component (Onboarding, App) can rely
+   on `scan` / `blink` without re-injecting. */
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+html, body, #root { margin: 0; padding: 0; background: #0F0B1A; min-height: 100vh; }
+
+@keyframes scan {
+  0% { transform: translateY(-20px); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+
+button:focus-visible { outline: 1px solid #FF2E63; outline-offset: 2px; }
+
+input::placeholder, textarea::placeholder { color: #6F6580; }
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
