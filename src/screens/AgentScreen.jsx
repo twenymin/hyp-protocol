@@ -117,7 +117,7 @@ export default function AgentScreen({ state, currentDay, onReset }) {
 
       <div style={{ padding: '16px 18px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {STAT_CODES.map((code, i) => {
-          const value = state.stats[code];
+          const value = hasStats ? state.stats[code] : 0;
           const goal = goals[code];
           return (
             <div key={code} style={{
